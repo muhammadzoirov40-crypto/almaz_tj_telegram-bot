@@ -59,6 +59,15 @@ def test_valid_phones():
     assert ok and phone == "+992901234567"
     ok, err, phone = validate_phone("0901234567")
     assert ok and phone == "+992901234567"
+    # Operator code 00 (e.g. +992 002119831)
+    ok, err, phone = validate_phone("002119831")
+    assert ok and phone == "+992002119831"
+    ok, err, phone = validate_phone("+992002119831")
+    assert ok and phone == "+992002119831"
+    ok, err, phone = validate_phone("992002119831")
+    assert ok and phone == "+992002119831"
+    ok, err, phone = validate_phone("00992002119831")
+    assert ok and phone == "+992002119831"
 
 
 def test_invalid_phones():
@@ -66,8 +75,12 @@ def test_invalid_phones():
     assert not validate_phone("12345")[0]
     assert not validate_phone("+1234567890")[0]
     assert not validate_phone("abcdefghij")[0]
+    assert not validate_phone("00211983")[0]  # only 8 digits
+    assert not validate_phone("00021198311")[0]  # 11 digits
 
 
 def test_normalize_phone():
     assert normalize_phone("992901234567") == "+992901234567"
     assert normalize_phone("0901234567") == "+992901234567"
+    assert normalize_phone("002119831") == "+992002119831"
+    assert normalize_phone("+992002119831") == "+992002119831"

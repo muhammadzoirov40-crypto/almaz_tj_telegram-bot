@@ -10,16 +10,19 @@ from sqlalchemy.orm import selectinload
 
 from app.bot.filters import AdminFilter
 from app.bot.keyboards import (
+    format_product_button,
     get_admin_back_keyboard,
     get_admin_menu_keyboard,
+    get_balance_topup_review_keyboard,
     get_block_menu_keyboard,
     get_order_review_keyboard,
     get_pending_orders_keyboard,
 )
 from app.bot.states import AdminStates
-from app.constants import OrderStatus, PaymentStatus
+from app.constants import BalanceTopUpStatus, OrderStatus, PaymentStatus
 from app.database.models import Order, Payment, User
 from app.database.repositories import (
+    BalanceTopUpRepository,
     PaymentRepository,
     ProductRepository,
     SupportTicketRepository,
@@ -64,14 +67,19 @@ def _parse_parts(data: str) -> list[str]:
 
 
 def _order_detail(order: Order) -> str:
-    product_name = order.product.name if order.product else str(order.product_id)
+    product_name = (
+        format_product_button(order.product)
+        if order.product
+        else str(order.product_id)
+    )
     user = order.user
     user_label = "—"
     if user is not None:
         user_label = f"@{user.username}" if user.username else str(user.telegram_id)
     status_label = ORDER_STATUS_LABELS.get(order.status, order.status)
     return (
-        f"📦 №{order.id} · {product_name}\n"
+        f"📦 №{order.id}\n"
+        f"🎮 {product_name}\n"
         f"🆔 UID: <code>{order.free_fire_uid}</code>\n"
         f"💰 {order.amount} {order.currency}\n"
         f"👤 {user_label}\n"
@@ -107,6 +115,7 @@ async def admin_stats(call: CallbackQuery, session=None) -> None:
     pending = await session.scalar(
         select(func.count(Order.id)).where(Order.status == OrderStatus.PENDING)
     )
+    pending_topups = await BalanceTopUpRepository(session).count_pending()
     paid_payments = await session.scalar(
         select(func.count(Payment.id)).where(Payment.status == PaymentStatus.PAID)
     )
@@ -124,6 +133,7 @@ async def admin_stats(call: CallbackQuery, session=None) -> None:
         f"📦 Фармоишҳо: {orders_count or 0}\n"
         f"✅ Иҷрошуда: {completed or 0}\n"
         f"⏳ Дар интизори қабул: {pending or 0}\n"
+        f"📩 Шарҷҳо дар интизор: {pending_topups or 0}\n"
         f"💳 Пардохтҳо (PAID): {paid_payments or 0}\n"
         f"💰 Даромад: {revenue or 0} TJS\n"
         f"📞 Муроҷиатҳои кушода: {open_tickets or 0}"
@@ -160,6 +170,137 @@ async def admin_pending(call: CallbackQuery, session=None) -> None:
         reply_markup=get_pending_orders_keyboard([o.id for o in orders]),
     )
     await safe_answer(call)
+
+
+@router.callback_query(F.data.startswith("admin:bal:accept:"))
+async def admin_balance_topup_accept(call: CallbackQuery, session=None) -> None:
+    parts = _parse_parts(call.data or "")
+    if len(parts) != 4:
+        await safe_answer(call, "Нодуруст.", show_alert=True)
+        return
+    try:
+        request_id = int(parts[3])
+    except ValueError:
+        await safe_answer(call, "Нодуруст.", show_alert=True)
+        return
+
+    repo = BalanceTopUpRepository(session)
+    request = await repo.get_by_id(request_id)
+    if request is None:
+        await safe_answer(call, "Дархост ёфт нашуд.", show_alert=True)
+        return
+    if request.status != BalanceTopUpStatus.PENDING:
+        await safe_answer(
+            call,
+            f"Дархост алакай {request.status}",
+            show_alert=True,
+        )
+        return
+
+    user_service = UserService(session)
+    try:
+        user = await user_service.add_balance(
+            user_id=request.user_id,
+            amount=Decimal(request.amount),
+            description=f"Balance top-up #{request.id} via {request.method}",
+            reference_id=request.reference_id or f"bal:{request.id}",
+        )
+    except ValueError as exc:
+        await safe_answer(call, str(exc), show_alert=True)
+        return
+    except Exception:
+        logger.exception("Balance top-up approve failed request_id=%s", request_id)
+        await safe_answer(call, "Хатогӣ.", show_alert=True)
+        return
+
+    await repo.mark_approved(request_id)
+    request = await repo.get_by_id(request_id)
+
+    method_label = "🏙 Dushanbe City" if request.method == "ds" else "💳 Alif"
+    detail = (
+        f"📦 №{request.id}\n"
+        f"💰 {request.amount} {request.currency}\n"
+        f"💳 {method_label}\n"
+        + (f"📱 {request.phone}\n" if request.phone else "")
+        + f"💳 Баланс: {user.balance} TJS"
+    )
+    await safe_edit_text(
+        call.message,
+        f"✅ <b>Шарҷ қабул шуд</b>\n\n{detail}",
+        reply_markup=get_admin_back_keyboard(),
+    )
+
+    if request.user is not None:
+        await notification_service.safe_send(
+            request.user.telegram_id,
+            f"✅ <b>Шарҷ қабул шуд!</b>\n\n"
+            f"📦 Дархост: №{request.id}\n"
+            f"💰 Илова шуд: {request.amount} {request.currency}\n"
+            f"💳 Баланс: <b>{user.balance} TJS</b>",
+        )
+
+    logger.info(
+        "Admin accepted balance topup request_id=%s by=%s",
+        request_id,
+        call.from_user.id,
+    )
+    await safe_answer(call, "Қабул шуд!")
+
+
+@router.callback_query(F.data.startswith("admin:bal:reject:"))
+async def admin_balance_topup_reject(call: CallbackQuery, session=None) -> None:
+    parts = _parse_parts(call.data or "")
+    if len(parts) != 4:
+        await safe_answer(call, "Нодуруст.", show_alert=True)
+        return
+    try:
+        request_id = int(parts[3])
+    except ValueError:
+        await safe_answer(call, "Нодуруст.", show_alert=True)
+        return
+
+    repo = BalanceTopUpRepository(session)
+    request = await repo.get_by_id(request_id)
+    if request is None:
+        await safe_answer(call, "Дархост ёфт нашуд.", show_alert=True)
+        return
+    if request.status != BalanceTopUpStatus.PENDING:
+        await safe_answer(
+            call,
+            f"Дархост алакай {request.status}",
+            show_alert=True,
+        )
+        return
+
+    await repo.mark_rejected(request_id, reason="Rejected by admin")
+    request = await repo.get_by_id(request_id)
+
+    method_label = "🏙 Dushanbe City" if request.method == "ds" else "💳 Alif"
+    await safe_edit_text(
+        call.message,
+        f"❌ <b>Шарҷ рад шуд</b>\n\n"
+        f"📦 №{request.id}\n"
+        f"💰 {request.amount} {request.currency}\n"
+        f"💳 {method_label}",
+        reply_markup=get_admin_back_keyboard(),
+    )
+
+    if request.user is not None:
+        await notification_service.safe_send(
+            request.user.telegram_id,
+            f"❌ <b>Шарҷ рад шуд</b>\n\n"
+            f"📦 Дархост: №{request.id}\n"
+            f"💰 {request.amount} {request.currency}\n\n"
+            "Идора чекро рад кард.\n"
+            "Барои тафсилот ба дастгирӣ муроҷиат кунед.",
+        )
+
+    logger.info(
+        "Admin rejected balance topup request_id=%s by=%s",
+        request_id,
+        call.from_user.id,
+    )
+    await safe_answer(call, "Рад шуд")
 
 
 @router.callback_query(F.data.startswith("admin:order:accept:"))
@@ -208,7 +349,9 @@ async def admin_order_accept(call: CallbackQuery, session=None) -> None:
 
     user = order.user
     if user is not None:
-        product_name = order.product.name if order.product else ""
+        product_name = (
+            format_product_button(order.product) if order.product else ""
+        )
         await notification_service.safe_send(
             user.telegram_id,
             f"✅ <b>Фармоиши шумо қабул шуд!</b>\n\n"
@@ -273,7 +416,9 @@ async def admin_order_reject(call: CallbackQuery, session=None) -> None:
 
     user = order.user
     if user is not None:
-        product_name = order.product.name if order.product else ""
+        product_name = (
+            format_product_button(order.product) if order.product else ""
+        )
         detail = (
             "\nБаланс барқарор карда шуд." if was_deducted else ""
         )
@@ -305,10 +450,14 @@ async def admin_orders(call: CallbackQuery, session=None) -> None:
     for order in recent:
         icon = ORDER_ICONS.get(order.status, "ℹ️")
         status_label = ORDER_STATUS_LABELS.get(order.status, order.status)
-        product_name = order.product.name if order.product else str(order.product_id)
+        product_name = (
+            format_product_button(order.product)
+            if order.product
+            else str(order.product_id)
+        )
         lines.append(
-            f"{icon} №{order.id} · {product_name} · "
-            f"UID {order.free_fire_uid} · {order.amount} {order.currency} · {status_label}"
+            f"{icon} №{order.id} · {product_name}\n"
+            f"   UID {order.free_fire_uid} · {order.amount} {order.currency} · {status_label}"
         )
     if not recent:
         lines.append("Фармоишҳо мавҷуд нест.")
@@ -346,10 +495,7 @@ async def admin_products(call: CallbackQuery, session=None) -> None:
     lines = ["💎 <b>Маҳсулотҳо</b>\n"]
     for product in products:
         status = "✅" if product.is_active else "⏸"
-        lines.append(
-            f"{status} #{product.id} · {product.name} · {product.diamonds} 💎 · "
-            f"{product.price} {product.currency}"
-        )
+        lines.append(f"{status} {format_product_button(product)}")
 
     from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
@@ -359,8 +505,8 @@ async def admin_products(call: CallbackQuery, session=None) -> None:
         buttons.append(
             [
                 InlineKeyboardButton(
-                    text=f"#{product.id} {product.diamonds}💎 → "
-                    + ("⏸" if product.is_active else "▶️"),
+                    text=format_product_button(product)
+                    + (" ⏸" if product.is_active else " ▶️"),
                     callback_data=f"admin:product:{action}:{product.id}",
                 )
             ]

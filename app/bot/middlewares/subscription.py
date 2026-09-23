@@ -18,9 +18,12 @@ CHECK_CALLBACK_DATA = "sub:check"
 NOT_SUBSCRIBED_ALERT = "⚠️ Аввал ба канал обуна шавед!"
 
 SUBSCRIPTION_TEXT = (
-    "📢 <b>Обуна ҳатмӣ аст</b>\n\n"
-    "Барои истифодаи бот аввал ба канал обуна шавед, "
-    "пас тугмачаи «Ҳисоб кардан»-ро пахш кунед.\n\n"
+    "📢 <b>Аввал ба канал обуна шавед!</b>\n\n"
+    "Бот истифода бурданро фақат пас аз обуна иҷозат медиҳад.\n\n"
+    "1️⃣ Тугмаи «Обуна шудан»-ро зер кунед\n"
+    "2️⃣ Дар канал Обуна (Join) кунед\n"
+    "3️⃣ Бозгашта «✅ Ҳисоб кардан»-ро зер кунед\n\n"
+    "⚠️ Таъин нашавад → ба бот дохил шудан мумкин нест.\n\n"
     f"Канал: <a href=\"{settings.force_subscribe_url}\">"
     f"{settings.force_subscribe_channel}</a>"
 )
@@ -70,13 +73,14 @@ async def check_subscription(bot: Bot, user_id: int) -> bool:
         member = await bot.get_chat_member(chat_id=channel, user_id=user_id)
     except (TelegramBadRequest, TelegramForbiddenError) as exc:
         logger.warning(
-            "Subscription check failed user_id=%s channel=%s: %s",
+            "Subscription check failed user_id=%s channel=%s: %s "
+            "(bot must be admin of the channel)",
             user_id,
             channel,
             exc,
         )
-        # Unknown bot rights / bad channel → do not lock everyone out
-        return True
+        # Fail closed: force-subscribe must not let users through unverified
+        return False
     if is_subscribed_status(member):
         _set_cached_positive(user_id, channel)
         return True
@@ -133,7 +137,9 @@ class SubscriptionMiddleware(BaseMiddleware):
 
         bot: Bot | None = data.get("bot")
         if bot is None:
-            return await handler(event, data)
+            # Cannot verify membership → do not open the bot
+            await _deny(event)
+            return None
 
         is_subscribed = await check_subscription(bot, tg_user.id)
 

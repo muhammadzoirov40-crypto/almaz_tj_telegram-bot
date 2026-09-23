@@ -49,6 +49,11 @@ class Settings(BaseSettings):
     payment_card_number: str = Field(default="", alias="PAYMENT_CARD_NUMBER")
     payment_card_holder: str = Field(default="", alias="PAYMENT_CARD_HOLDER")
 
+    # Balance top-up: Alif + Dushanbe City payment numbers
+    payment_alif_number: str = Field(default="", alias="PAYMENT_ALIF_NUMBER")
+    payment_alif_holder: str = Field(default="", alias="PAYMENT_ALIF_HOLDER")
+    payment_ds_phone: str = Field(default="", alias="PAYMENT_DS_PHONE")
+
     # Providers: "mock" (MVP/dev) or "real" (production)
     payment_provider: str = Field(default="mock", alias="PAYMENT_PROVIDER")
     topup_provider: str = Field(default="mock", alias="TOPUP_PROVIDER")

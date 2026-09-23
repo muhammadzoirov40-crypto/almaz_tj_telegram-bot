@@ -1,3 +1,4 @@
+from app.database.repositories.balance_topups import BalanceTopUpRepository
 from app.database.repositories.orders import OrderRepository
 from app.database.repositories.payments import PaymentRepository
 from app.database.repositories.products import ProductRepository
@@ -12,4 +13,5 @@ __all__ = [
     "PaymentRepository",
     "TransactionRepository",
     "SupportTicketRepository",
+    "BalanceTopUpRepository",
 ]

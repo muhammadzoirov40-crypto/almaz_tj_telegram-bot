@@ -1,3 +1,7 @@
+from app.constants.balance_topup import (
+    BalanceTopUpMethod,
+    BalanceTopUpStatus,
+)
 from app.constants.games import (
     GAME_BY_KEY,
     GAME_LABELS,
@@ -16,6 +20,8 @@ __all__ = [
     "PaymentStatus",
     "TransactionType",
     "SupportStatus",
+    "BalanceTopUpStatus",
+    "BalanceTopUpMethod",
     "GAMES",
     "GAME_BY_KEY",
     "GAME_LABELS",

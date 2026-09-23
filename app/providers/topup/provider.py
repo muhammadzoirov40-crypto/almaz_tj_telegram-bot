@@ -77,6 +77,7 @@ _LOOKUP_UA = (
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/141.0.0.0 Safari/537.36"
 )
+_APP_UA = "DanatelTopupBot/1.0 (+https://t.me/danatel_bot)"
 _FF_REGIONS = ("ind", "sg", "br", "ru", "id", "tw", "us", "vn", "th", "me", "pk")
 
 
@@ -139,7 +140,7 @@ class RealTopUpProvider(TopUpProvider):
     def _headers(self) -> dict[str, str]:
         headers = {
             "Accept": "application/json",
-            "User-Agent": _LOOKUP_UA,
+            "User-Agent": _APP_UA,
         }
         if self.api_key:
             headers["x-api-key"] = self.api_key
@@ -163,7 +164,7 @@ class RealTopUpProvider(TopUpProvider):
                 params=params,
                 headers={
                     "Accept": "application/json",
-                    "User-Agent": _LOOKUP_UA,
+                    "User-Agent": _APP_UA,
                     **({"x-api-key": self.api_key} if self.api_key else {}),
                 },
             )
@@ -185,11 +186,29 @@ class RealTopUpProvider(TopUpProvider):
             response.raise_for_status()
             data = response.json()
         if isinstance(data, dict):
+            if data.get("status") == "error" or data.get("error"):
+                return None
+            return data
+        return None
+
+    async def _wzapi_ff_lookup(self, uid: str, region: str = "IND") -> dict | None:
+        url = "https://wzapiinfo.vercel.app/get"
+        params = {"uid": uid, "region": region.lower()}
+        async with httpx.AsyncClient(timeout=_API_TIMEOUT) as client:
+            response = await client.get(
+                url,
+                params=params,
+                headers={"Accept": "application/json", "User-Agent": _LOOKUP_UA},
+            )
+            if response.status_code != 200:
+                return None
+            data = response.json()
+        if isinstance(data, dict) and not data.get("error"):
             return data
         return None
 
     async def _lookup_ff_nickname(self, uid: str, label: str) -> AccountInfo | None:
-        """Try FFC first (needs key), then free epep API. None = hard fail."""
+        """Try FFC (needs key), then free fallbacks. None = hard fail."""
         ffc_error: str | None = None
         if self.api_key or not self._is_ffc_lookup():
             try:
@@ -249,27 +268,13 @@ class RealTopUpProvider(TopUpProvider):
                 )
 
         # Free fallback (no API key needed) — Free Fire only.
-        try:
-            free_data = await self._free_ff_lookup(uid, region="IND")
-            if free_data is None:
-                return None
-            nickname = _extract_nickname(free_data)
-            region = _extract_region(free_data)
-            display = f"{label} ({region})" if region else label
-            if nickname:
-                logger.info(
-                    "FF lookup ok via free uid=%s nickname=%s", uid, nickname
-                )
-                return AccountInfo(
-                    found=True,
-                    nickname=nickname,
-                    game=display,
-                    uid=uid,
-                )
-            # try other common regions
-            for alt in ("SG", "BR", "US", "ID", "RU"):
+        for region in ("IND", "SG", "BR", "US", "ID", "RU"):
+            for lookup_fn in (
+                lambda r: self._free_ff_lookup(uid, region=r),
+                lambda r: self._wzapi_ff_lookup(uid, region=r),
+            ):
                 try:
-                    free_data = await self._free_ff_lookup(uid, region=alt)
+                    free_data = await lookup_fn(region)
                 except httpx.HTTPError:
                     continue
                 if not free_data:
@@ -279,36 +284,26 @@ class RealTopUpProvider(TopUpProvider):
                     logger.info(
                         "FF lookup ok via free uid=%s region=%s nickname=%s",
                         uid,
-                        alt,
+                        region,
                         nickname,
                     )
                     return AccountInfo(
                         found=True,
                         nickname=nickname,
-                        game=f"{label} ({alt})",
+                        game=f"{label} ({region})",
                         uid=uid,
                     )
-            return AccountInfo(
-                found=True,
-                nickname="",
-                game=label,
-                uid=uid,
-                message="Ном ёфт нашуд. Бе санҷиш ID-ро идома диҳед.",
-            )
-        except httpx.HTTPError as exc:
-            logger.warning(
-                "Free FF lookup failed uid=%s err=%s primary=%s",
-                uid,
-                exc,
-                ffc_error,
-            )
-            return AccountInfo(
-                found=True,
-                nickname="",
-                game=label,
-                uid=uid,
-                message="Ном санҷида нашуд. Бе санҷиш ID-ро идома диҳед.",
-            )
+        # All free sources failed or no nickname found.
+        logger.warning(
+            "Free FF lookup failed uid=%s primary=%s", uid, ffc_error
+        )
+        return AccountInfo(
+            found=True,
+            nickname="",
+            game=label,
+            uid=uid,
+            message="Ном санҷида нашуд. Бе санҷиш ID-ро идома диҳед.",
+        )
 
     async def lookup_account(self, uid: str, game: str = "ff") -> AccountInfo:
         label = _GAME_LABELS.get(game, game.title())

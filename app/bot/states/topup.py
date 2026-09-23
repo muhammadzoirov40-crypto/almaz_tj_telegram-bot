@@ -16,6 +16,7 @@ class BalanceTopUpStates(StatesGroup):
     waiting_amount = State()
     waiting_phone = State()
     confirming = State()
+    waiting_receipt = State()
 
 
 class SupportStates(StatesGroup):

@@ -45,6 +45,9 @@ class User(Base):
     support_tickets: Mapped[list["SupportTicket"]] = relationship(
         back_populates="user"
     )
+    balance_topups: Mapped[list["BalanceTopUpRequest"]] = relationship(
+        back_populates="user"
+    )
 
 
 class Product(Base):
@@ -131,6 +134,39 @@ class Transaction(Base):
     )
 
     user: Mapped["User"] = relationship(back_populates="transactions")
+
+
+class BalanceTopUpRequest(Base):
+    """Pending balance top-up awaiting admin receipt approval."""
+
+    __tablename__ = "balance_topup_requests"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(8), default="TJS", nullable=False)
+    method: Mapped[str] = mapped_column(String(32), nullable=False)  # alif | ds
+    phone: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    reference_id: Mapped[Optional[str]] = mapped_column(String(128), index=True)
+    receipt_photo_file_id: Mapped[Optional[str]] = mapped_column(
+        String(256), nullable=True
+    )
+    receipt_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(32), default="PENDING", index=True
+    )  # PENDING | APPROVED | REJECTED | CANCELLED
+    failure_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    processed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    user: Mapped["User"] = relationship(back_populates="balance_topups")
 
 
 class SupportTicket(Base):

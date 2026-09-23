@@ -6,7 +6,11 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from app.bot.utils import safe_answer, safe_edit_text
-from app.bot.keyboards import get_main_menu_keyboard, get_orders_keyboard
+from app.bot.keyboards import (
+    format_product_button,
+    get_main_menu_keyboard,
+    get_orders_keyboard,
+)
 from app.bot.keyboards.main import ORDERS_TEXT
 from app.constants import OrderStatus
 from app.database.models import Order, User
@@ -41,12 +45,15 @@ def format_orders(orders: list[Order]) -> str:
     for order in orders:
         icon = STATUS_ICONS.get(order.status, "ℹ️")
         status_label = STATUS_LABELS.get(order.status, order.status)
-        product_name = order.product.name if order.product else str(order.product_id)
+        product_name = (
+            format_product_button(order.product)
+            if order.product
+            else str(order.product_id)
+        )
         lines.append(
-            f"{icon} №{order.id} · {product_name} · "
-            f"{order.amount} {order.currency} · {status_label}\n"
+            f"{icon} №{order.id} · {product_name}\n"
             f"   UID: <code>{order.free_fire_uid}</code> · "
-            f"{order.created_at:%Y-%m-%d %H:%M}"
+            f"{order.created_at:%Y-%m-%d %H:%M} · {status_label}"
         )
     return "\n".join(lines)
 

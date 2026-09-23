@@ -9,6 +9,7 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.keyboards import (
+    format_product_button,
     get_account_confirm_keyboard,
     get_ff_category_keyboard,
     get_game_keyboard,
@@ -105,7 +106,7 @@ async def _products_prompt(
     text = (
         f"🔥 <b>{title}</b>\n\n"
         "Маҳсулотро интихоб кунед.\n"
-        f"💳 Ҳисоби шумо: {balance} TJS"
+        f"💳 Хисоби шумо: {balance} с."
     )
     return text, products, cat_label
 
@@ -477,11 +478,10 @@ async def _show_order_confirm(
 
     text = (
         "🧾 <b>Тасдики фармоиш</b>\n\n"
-        f"📦 Маҳсулот: 💎 {product.name}\n"
+        f"📦 Маҳсулот: {format_product_button(product)}\n"
         f"🎮 Бозӣ: {game_label}\n"
         f"🆔 Гиранда: <code>{uid}</code>\n"
         f"👤 Лақаб: <b>{nickname}</b>\n\n"
-        f"💰 Нарх: <b>{_fmt_money(price)} {product.currency}</b>\n"
         f"💳 Ҳисоби шумо: <b>{_fmt_money(balance)} {product.currency}</b>\n"
         f"📉 Пас аз харид: <b>{_fmt_money(after)} {product.currency}</b>\n\n"
         "Барои пардохт тугмаи поёнро пахш кунед."
@@ -552,7 +552,7 @@ async def on_order_pay(
     await state.update_data(order_id=order.id, uid=uid, product_id=product_id)
     await state.set_state(TopUpStates.waiting_receipt)
 
-    product_name = product.name
+    product_name = format_product_button(product)
     await _notify_admins_balance_order(session, order, product_name)
 
     new_balance = _fmt_money(Decimal(user.balance) - Decimal(product.price))
@@ -561,7 +561,6 @@ async def on_order_pay(
         f"📦 Фармоиш: №{order.id}\n"
         f"🎮 {product_name}\n"
         f"🆔 UID: <code>{uid}</code>\n"
-        f"💰 Нарх: <b>{_fmt_money(product.price)} {product.currency}</b>\n"
         f"💳 Ҳисоб: {new_balance} {product.currency}\n\n"
         "📸 <b>Лутфан сурати чеки пардохт (исбот) фиристед.</b>\n"
         "Ё матни чекро нависед.\n\n"
@@ -668,7 +667,9 @@ async def on_receipt_photo(
         return
 
     photo_file_id = message.photo[-1].file_id
-    product_name = order.product.name if order.product else ""
+    product_name = (
+        format_product_button(order.product) if order.product else ""
+    )
     await _notify_admins_about_receipt(
         session, order, product_name, photo_file_id=photo_file_id
     )
@@ -713,7 +714,9 @@ async def on_receipt_text(
         return
 
     receipt_text = (message.text or "").strip()[:500]
-    product_name = order.product.name if order.product else ""
+    product_name = (
+        format_product_button(order.product) if order.product else ""
+    )
 
     admin_text = (
         "📩 <b>Чеки пардохт (матн)</b>\n\n"

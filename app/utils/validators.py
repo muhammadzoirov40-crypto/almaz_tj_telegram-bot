@@ -7,8 +7,9 @@ from typing import Optional
 # Free Fire numeric UID: typically 8-12 digits. We never ask for a password.
 UID_PATTERN = re.compile(r"^\d{8,12}$")
 USERNAME_PATTERN = re.compile(r"^[a-zA-Z0-9_]{5,32}$")
-# Tajikistan phone: +992XXXXXXXXX / 992XXXXXXXXX / 0XXXXXXXXX / local 9 digits
-PHONE_PATTERN = re.compile(r"^(?:\+?992|0)?[5-9]\d{8}$")
+# Tajikistan national number is 9 digits (can start with 00, 01, 90, …)
+PHONE_NATIONAL_LEN = 9
+PHONE_PATTERN = re.compile(r"^(?:\+?992)?\d{9}$")
 
 TOPUP_MIN_AMOUNT = Decimal("1.00")
 TOPUP_MAX_AMOUNT = Decimal("10000.00")
@@ -56,22 +57,52 @@ def validate_topup_amount(value: str) -> tuple[bool, Optional[str], Optional[Dec
     return True, None, amount.quantize(Decimal("0.01"))
 
 
-def normalize_phone(value: str) -> str:
-    digits = re.sub(r"\D", "", value or "")
-    if digits.startswith("00"):
-        digits = digits[2:]
-    if digits.startswith("992") and len(digits) >= 12:
+def _phone_digits(value: str) -> str:
+    return re.sub(r"\D", "", value or "")
+
+
+def _phone_national(value: str) -> str:
+    """Return 9-digit Tajik national number (without +992), or '' if not possible."""
+    digits = _phone_digits(value)
+    # International: 00992XXXXXXXXX
+    if digits.startswith("00992") and len(digits) >= 14:
+        digits = digits[5:]
+    # International: 992XXXXXXXXX
+    elif digits.startswith("992") and len(digits) >= 12:
         digits = digits[3:]
+    # Local dialing: 0XXXXXXXXX (10 digits)
     elif digits.startswith("0") and len(digits) == 10:
         digits = digits[1:]
-    return f"+992{digits}" if len(digits) == 9 else value.strip()
+    if len(digits) == PHONE_NATIONAL_LEN and digits.isdigit():
+        return digits
+    return ""
+
+
+def normalize_phone(value: str) -> str:
+    national = _phone_national(value)
+    if national:
+        return f"+992{national}"
+    return (value or "").strip()
 
 
 def validate_phone(value: str) -> tuple[bool, Optional[str], Optional[str]]:
     raw = (value or "").strip()
     if not raw:
         return False, "Рақами телефон холӣ аст.", None
-    cleaned = raw.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
-    if not PHONE_PATTERN.match(cleaned):
-        return False, "Рақами Тоҷикистон нависед (масалан: +992901234567).", None
-    return True, None, normalize_phone(cleaned)
+
+    cleaned = (
+        raw.replace(" ", "")
+        .replace("-", "")
+        .replace("(", "")
+        .replace(")", "")
+        .replace("\t", "")
+    )
+    national = _phone_national(cleaned)
+    if not national:
+        return (
+            False,
+            "Рақами Тоҷикистон нависед "
+            "(масалан: +992002119831 ё 002119831).",
+            None,
+        )
+    return True, None, f"+992{national}"

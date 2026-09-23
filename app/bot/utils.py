@@ -28,18 +28,63 @@ async def safe_answer(
         return False
 
 
+def _is_media_message(message: Message) -> bool:
+    return bool(
+        message.photo
+        or message.video
+        or message.document
+        or message.animation
+        or message.audio
+        or message.voice
+        or message.sticker
+    )
+
+
 async def safe_edit_text(
     message: Message | None,
     text: str,
     reply_markup: InlineKeyboardMarkup | None = None,
     **kwargs,
 ) -> bool:
+    """Edit a text message, or caption if the message is media (photo receipt)."""
     if message is None:
         return False
+
+    if _is_media_message(message):
+        try:
+            await message.edit_caption(
+                caption=text, reply_markup=reply_markup, **kwargs
+            )
+            return True
+        except TelegramBadRequest as exc:
+            err = str(exc)
+            if "message is not modified" in err:
+                return False
+            if "message to edit not found" in err:
+                return False
+            # Caption missing / cannot edit → fall through to text edit
+            logger.debug("edit_caption failed, trying edit_text: %s", err)
+
     try:
         await message.edit_text(text, reply_markup=reply_markup, **kwargs)
         return True
     except TelegramBadRequest as exc:
-        if "message is not modified" in str(exc):
+        err = str(exc)
+        if "message is not modified" in err:
+            return False
+        # Media message cannot become text → send new message instead
+        if _is_media_message(message) and "message to edit not found" not in err:
+            try:
+                await message.answer(text, reply_markup=reply_markup)
+                # Remove old buttons so only the new result shows
+                try:
+                    await message.edit_reply_markup(reply_markup=None)
+                except TelegramBadRequest:
+                    pass
+                return True
+            except TelegramBadRequest:
+                logger.warning("Fallback answer after edit failed: %s", err)
+                return False
+        if "message to edit not found" in err:
             return False
         raise
