@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import Message
 
 from app.bot.keyboards import get_main_menu_keyboard
-from app.bot.middlewares.subscription import CHECK_CALLBACK_DATA
-from app.bot.utils import safe_answer, safe_edit_text
 from app.services.user_service import UserService
 from app.utils.logger import get_logger
 
@@ -56,17 +54,3 @@ async def cmd_menu(message: Message, db_user=None) -> None:
         "🏠 <b>Менюи ALMAZ TJ</b>",
         reply_markup=get_main_menu_keyboard(is_admin=is_admin),
     )
-
-
-@router.callback_query(F.data == CHECK_CALLBACK_DATA)
-async def on_subscription_checked(
-    call: CallbackQuery,
-    db_user=None,
-) -> None:
-    """Runs only when SubscriptionMiddleware confirmed the user joined."""
-    await safe_edit_text(call.message, START_TEXT,
-        reply_markup=get_main_menu_keyboard(
-            is_admin=db_user.is_admin if db_user else False
-        ),
-    )
-    await safe_answer(call, "✅ Обуна тасдиқ шуд!")

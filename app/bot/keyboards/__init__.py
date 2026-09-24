@@ -29,7 +29,6 @@ from app.bot.keyboards.topup import (
     get_order_confirm_keyboard,
     get_payment_receipt_keyboard,
     get_products_keyboard,
-    get_receipt_keyboard,
     get_uid_request_keyboard,
 )
 
@@ -43,7 +42,6 @@ __all__ = [
     "get_account_confirm_keyboard",
     "get_order_confirm_keyboard",
     "get_payment_receipt_keyboard",
-    "get_receipt_keyboard",
     "get_cancel_keyboard",
     "get_uid_request_keyboard",
     "get_orders_keyboard",

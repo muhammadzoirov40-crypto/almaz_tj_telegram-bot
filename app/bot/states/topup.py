@@ -9,7 +9,6 @@ class TopUpStates(StatesGroup):
     waiting_uid = State()
     confirming_account = State()
     confirming_order = State()
-    waiting_receipt = State()
 
 
 class BalanceTopUpStates(StatesGroup):

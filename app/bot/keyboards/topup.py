@@ -195,40 +195,6 @@ def get_payment_receipt_keyboard(order_id: int) -> InlineKeyboardMarkup:
     )
 
 
-def get_receipt_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="🔙 Менюи асосӣ", callback_data="back:menu"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text=CANCEL_TEXT, callback_data="order:cancel"
-                )
-            ],
-        ]
-    )
-
-
-def get_receipt_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="🔙 Менюи асосӣ", callback_data="back:menu"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text=CANCEL_TEXT, callback_data="order:cancel"
-                )
-            ],
-        ]
-    )
-
-
 def get_cancel_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[

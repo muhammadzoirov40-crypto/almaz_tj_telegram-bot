@@ -58,12 +58,6 @@ class Settings(BaseSettings):
     payment_provider: str = Field(default="mock", alias="PAYMENT_PROVIDER")
     topup_provider: str = Field(default="mock", alias="TOPUP_PROVIDER")
 
-    # Force subscribe: user must join this channel before using the bot.
-    # Empty value disables the check. Examples: "@my_channel" or "-1001234567890"
-    force_subscribe_channel: str = Field(
-        default="@_ff_almaz_tj_", alias="FORCE_SUBSCRIBE_CHANNEL"
-    )
-
     # App
     environment: str = Field(default="development", alias="ENVIRONMENT")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
@@ -90,20 +84,6 @@ class Settings(BaseSettings):
 
     def is_admin_id(self, telegram_id: int) -> bool:
         return telegram_id in self.admin_ids
-
-    @property
-    def force_subscribe_enabled(self) -> bool:
-        return bool(self.force_subscribe_channel.strip())
-
-    @property
-    def force_subscribe_url(self) -> str:
-        channel = self.force_subscribe_channel.strip()
-        if channel.startswith("@"):
-            return f"https://t.me/{channel[1:]}"
-        if channel.lstrip("-").isdigit():
-            return ""
-        return channel if channel.startswith("http") else ""
-
 
 @lru_cache
 def get_settings() -> Settings:

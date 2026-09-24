@@ -12,7 +12,7 @@ from aiogram.types import ErrorEvent
 
 from app.bot.handlers import router as handlers_router
 from app.bot.keyboards.main import get_bot_commands
-from app.bot.middlewares import DatabaseMiddleware, SubscriptionMiddleware, UserMiddleware
+from app.bot.middlewares import DatabaseMiddleware, UserMiddleware
 from app.config import settings
 from app.database.database import (
     close_db_connection,
@@ -146,11 +146,9 @@ async def main() -> None:
     )
     dp = Dispatcher(storage=MemoryStorage())
 
-    # DatabaseMiddleware first (outer): injects `session`, then UserMiddleware injects `db_user`,
-    # then SubscriptionMiddleware blocks users not subscribed to the channel.
+    # DatabaseMiddleware first (outer): injects `session`, then UserMiddleware injects `db_user`
     dp.update.middleware(DatabaseMiddleware())
     dp.update.middleware(UserMiddleware())
-    dp.update.middleware(SubscriptionMiddleware())
 
     dp.include_router(handlers_router)
 

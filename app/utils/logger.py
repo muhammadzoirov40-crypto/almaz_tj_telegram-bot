@@ -13,8 +13,19 @@ def configure_logging() -> None:
     if _CONFIGURED:
         return
 
+    # Windows console defaults to cp1251 — emoji/Cyrillic in logs crash it
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
+
     level = getattr(logging, settings.log_level.upper(), logging.INFO)
-    handler = logging.StreamHandler(stream=sys.stdout)
+    handler = logging.StreamHandler(
+        stream=sys.stdout,
+    )
     handler.setFormatter(
         logging.Formatter(
             fmt="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",

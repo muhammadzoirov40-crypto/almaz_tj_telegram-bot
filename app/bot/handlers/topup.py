@@ -15,8 +15,8 @@ from app.bot.keyboards import (
     get_game_keyboard,
     get_main_menu_keyboard,
     get_order_confirm_keyboard,
+    get_payment_receipt_keyboard,
     get_products_keyboard,
-    get_receipt_keyboard,
     get_uid_request_keyboard,
 )
 from app.bot.keyboards.main import TOPUP_TEXT
@@ -131,7 +131,6 @@ async def on_topup_callback(call: CallbackQuery, state: FSMContext) -> None:
 @router.message(TopUpStates.waiting_uid, F.text == CANCEL_TEXT)
 @router.message(TopUpStates.confirming_account, F.text == CANCEL_TEXT)
 @router.message(TopUpStates.confirming_order, F.text == CANCEL_TEXT)
-@router.message(TopUpStates.waiting_receipt, F.text == CANCEL_TEXT)
 async def cancel_topup(
     message: Message,
     state: FSMContext,
@@ -550,24 +549,24 @@ async def on_order_pay(
         return
 
     await state.update_data(order_id=order.id, uid=uid, product_id=product_id)
-    await state.set_state(TopUpStates.waiting_receipt)
+    await _clear_topup_state(state)
 
     product_name = format_product_button(product)
     await _notify_admins_balance_order(session, order, product_name)
 
     new_balance = _fmt_money(Decimal(user.balance) - Decimal(product.price))
     text = (
-        "✅ <b>Пардохт анҷом ёфт!</b>\n\n"
+        "✅ <b>Пардохт анjom ёфт!</b>\n\n"
         f"📦 Фармоиш: №{order.id}\n"
         f"🎮 {product_name}\n"
         f"🆔 UID: <code>{uid}</code>\n"
         f"💳 Ҳисоб: {new_balance} {product.currency}\n\n"
-        "📸 <b>Лутфан сурати чеки пардохт (исбот) фиристед.</b>\n"
-        "Ё матни чекро нависед.\n\n"
-        "⏳ Идора чекро санҷида, фармоишро тасдиқ мекунад.\n"
+        "⏳ Интизори қабули идора шавед.\n"
         "Дар бораи қабул/рад ба шумо хабар дода мешавад."
     )
-    await safe_edit_text(call.message, text, reply_markup=get_receipt_keyboard())
+    await safe_edit_text(
+        call.message, text, reply_markup=get_payment_receipt_keyboard()
+    )
     await safe_answer(call, "Пардохт шуд!")
 
 
@@ -601,150 +600,10 @@ async def _notify_admins_balance_order(
         logger.warning("NotificationService bot not configured")
 
 
-async def _notify_admins_about_receipt(
-    session: AsyncSession,
-    order: Order,
-    product_name: str,
-    photo_file_id: str | None = None,
-) -> None:
-    from app.database.models import User as UserModel
-
-    user = await session.get(UserModel, order.user_id)
-    user_label = "@?"
-    if user is not None:
-        user_label = f"@{user.username}" if user.username else str(user.telegram_id)
-
-    admin_text = (
-        "📩 <b>Чеки пардохт</b>\n\n"
-        f"📦 №{order.id}\n"
-        f"🎮 {product_name}\n"
-        f"🆔 UID: <code>{order.free_fire_uid}</code>\n"
-        f"💰 {order.amount} {order.currency}\n"
-        f"👤 Клиент: {user_label}\n\n"
-        "Чекро санҷед ва қабул ё рад кунед:"
-    )
-    try:
-        await notification_service.notify_admins_new_order(
-            admin_text,
-            reply_markup=_order_review_kb(order.id),
-            photo=photo_file_id,
-        )
-    except RuntimeError:
-        logger.warning("NotificationService bot not configured")
-
-
 def _order_review_kb(order_id: int):
     from app.bot.keyboards import get_order_review_keyboard
 
     return get_order_review_keyboard(order_id)
-
-
-@router.message(TopUpStates.waiting_receipt, F.photo)
-async def on_receipt_photo(
-    message: Message,
-    state: FSMContext,
-    session: AsyncSession,
-    db_user: User | None = None,
-) -> None:
-    data = await state.get_data()
-    order_id = data.get("order_id")
-    if not order_id:
-        await state.clear()
-        await message.answer(
-            "❌ Фармоиш ёфт нашуд. Дубора оғоз кунед.",
-            reply_markup=get_main_menu_keyboard(),
-        )
-        return
-
-    order_service = OrderService(session)
-    order = await order_service.get_order(order_id)
-    if order is None:
-        await state.clear()
-        await message.answer(
-            "❌ Фармоиш ёфт нашуд. Дубора оғоз кунед.",
-            reply_markup=get_main_menu_keyboard(),
-        )
-        return
-
-    photo_file_id = message.photo[-1].file_id
-    product_name = (
-        format_product_button(order.product) if order.product else ""
-    )
-    await _notify_admins_about_receipt(
-        session, order, product_name, photo_file_id=photo_file_id
-    )
-    await _clear_topup_state(state)
-
-    text = (
-        "✅ <b>Чек ҳамчун исбот қабул шуд</b>\n\n"
-        f"📦 Фармоиш: №{order.id}\n"
-        f"🎮 {product_name}\n"
-        f"💰 {order.amount} {order.currency}\n\n"
-        "Идора чекро санҷида, ҷавоб медиҳад.\n"
-        "Дар бораи қабул/рад ба шумо хабар дода мешавад."
-    )
-    await message.answer(text, reply_markup=get_main_menu_keyboard())
-
-
-@router.message(TopUpStates.waiting_receipt)
-async def on_receipt_text(
-    message: Message,
-    state: FSMContext,
-    session: AsyncSession,
-    db_user: User | None = None,
-) -> None:
-    data = await state.get_data()
-    order_id = data.get("order_id")
-    if not order_id:
-        await state.clear()
-        await message.answer(
-            "❌ Фармоиш ёфт нашуд. Дубора оғоз кунед.",
-            reply_markup=get_main_menu_keyboard(),
-        )
-        return
-
-    order_service = OrderService(session)
-    order = await order_service.get_order(order_id)
-    if order is None:
-        await state.clear()
-        await message.answer(
-            "❌ Фармоиш ёфт нашуд. Дубора оғоз кунед.",
-            reply_markup=get_main_menu_keyboard(),
-        )
-        return
-
-    receipt_text = (message.text or "").strip()[:500]
-    product_name = (
-        format_product_button(order.product) if order.product else ""
-    )
-
-    admin_text = (
-        "📩 <b>Чеки пардохт (матн)</b>\n\n"
-        f"📦 №{order.id}\n"
-        f"🎮 {product_name}\n"
-        f"🆔 UID: <code>{order.free_fire_uid}</code>\n"
-        f"💰 {order.amount} {order.currency}\n"
-        f"👤 Клиент: "
-        f"{f'@{db_user.username}' if db_user and db_user.username else (db_user.telegram_id if db_user else '—')}\n\n"
-        f"✉️ Чек:\n{receipt_text}\n\n"
-        "Қабул ё рад кунед:"
-    )
-    try:
-        await notification_service.notify_admins_new_order(
-            admin_text,
-            reply_markup=_order_review_kb(order.id),
-        )
-    except RuntimeError:
-        logger.warning("NotificationService bot not configured")
-
-    await _clear_topup_state(state)
-    await message.answer(
-        "✅ <b>Чек ҳамчун исбот қабул шуд</b>\n\n"
-        f"📦 Фармоиш: №{order.id}\n"
-        f"💰 {order.amount} {order.currency}\n\n"
-        "Идора чекро санҷида, ҷавоб медиҳад.",
-        reply_markup=get_main_menu_keyboard(),
-    )
 
 
 @router.callback_query(F.data == "order:cancel")
