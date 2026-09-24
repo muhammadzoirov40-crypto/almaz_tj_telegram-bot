@@ -24,7 +24,7 @@ from app.bot.keyboards.main import BALANCE_TEXT
 from app.bot.keyboards.payment import CANCEL_TOPUP_TEXT
 from app.bot.states import BalanceTopUpStates
 from app.bot.utils import safe_answer, safe_edit_text
-from app.config import settings
+from app.config import DEFAULT_PAYMENT_NUMBER, settings
 from app.constants import BalanceTopUpMethod, BalanceTopUpStatus
 from app.database.models import User
 from app.database.repositories import BalanceTopUpRepository
@@ -157,10 +157,24 @@ async def process_custom_amount(message: Message, state: FSMContext) -> None:
     )
 
 
+def _format_payment_number(raw: str) -> str:
+    value = (raw or "").strip()
+    if not value:
+        return ""
+    if value.startswith("+"):
+        return value
+    digits = "".join(ch for ch in value if ch.isdigit())
+    if len(digits) == 9:
+        return f"+992 {digits}"
+    return value
+
+
 def _payment_number_for(method: str) -> str:
     if method == BalanceTopUpMethod.ALIF:
-        return settings.payment_alif_number or settings.payment_card_number or "—"
-    return settings.payment_ds_phone or settings.payment_card_number or "—"
+        raw = settings.payment_alif_number or settings.payment_card_number
+    else:
+        raw = settings.payment_ds_phone or settings.payment_card_number
+    return _format_payment_number(raw) or DEFAULT_PAYMENT_NUMBER
 
 
 def _payment_holder_for(method: str) -> str:
@@ -485,6 +499,11 @@ async def _send_topup_to_admin(
     lines.extend(["", "Қабул ё рад кунед:"])
 
     from app.bot.keyboards import get_balance_topup_review_keyboard
+
+    # Persist the receipt before notifying admins: if anything fails later the
+    # transaction is rolled back and the admin would hold a message for a
+    # request that no longer exists.
+    await session.commit()
 
     try:
         await notification_service.notify_admins_new_order(

@@ -318,6 +318,11 @@ async def admin_order_accept(call: CallbackQuery, session=None) -> None:
     order_service = OrderService(session)
     order = await order_service.get_order(order_id)
     if order is None:
+        logger.warning(
+            "Order not found on accept order_id=%s callback=%s",
+            order_id,
+            call.data,
+        )
         await safe_answer(call, "Фармоиш ёфт нашуд.", show_alert=True)
         return
     if order.status != OrderStatus.PENDING:
@@ -380,6 +385,11 @@ async def admin_order_reject(call: CallbackQuery, session=None) -> None:
     order_service = OrderService(session)
     order = await order_service.get_order(order_id)
     if order is None:
+        logger.warning(
+            "Order not found on reject order_id=%s callback=%s",
+            order_id,
+            call.data,
+        )
         await safe_answer(call, "Фармоиш ёфт нашуд.", show_alert=True)
         return
     if order.status != OrderStatus.PENDING:

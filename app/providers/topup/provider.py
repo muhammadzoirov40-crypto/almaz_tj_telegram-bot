@@ -7,6 +7,7 @@ import httpx
 from app.config import settings
 from app.constants.games import GAME_LABELS as _GAME_LABELS
 from app.providers.base import AccountInfo, TopUpProvider, TopUpResult
+from app.providers.fireloot import FireLootClient, FireLootError
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -32,15 +33,18 @@ class MockTopUpProvider(TopUpProvider):
                 uid=uid,
                 message="UID нодуруст аст.",
             )
-        nickname = f"Player_{uid[-6:]}"
+        nickname = ""
         logger.info(
-            "Mock account lookup game=%s uid=%s nickname=%s", game, uid, nickname
+            "Mock account lookup game=%s uid=%s (nickname lookup disabled in mock)",
+            game,
+            uid,
         )
         return AccountInfo(
             found=True,
             nickname=nickname,
             game=label,
             uid=uid,
+            message="Санҷиши ном дар ҳолати test кушода нест.",
         )
 
     async def topup(
@@ -130,11 +134,13 @@ class RealTopUpProvider(TopUpProvider):
     name = "real"
 
     def __init__(self, api_url: str | None = None, api_key: str | None = None) -> None:
-        self.api_url = (api_url or settings.effective_topup_api_url).rstrip("/")
+        self.api_url = (api_url or settings.effective_topup_api_url or "").rstrip("/")
         self.api_key = api_key or settings.effective_topup_api_key
-        if not self.api_url:
+        self.fireloot = FireLootClient()
+        if not self.api_url and not self.fireloot.configured:
             raise RuntimeError(
-                "TOPUP_PROVIDER=real requires FREE_FIRE_API_URL (or TOPUP_API_URL)"
+                "TOPUP_PROVIDER=real requires FREE_FIRE_API_URL (or TOPUP_API_URL) "
+                "or FIRELOOT_API_KEY"
             )
 
     def _headers(self) -> dict[str, str]:
@@ -207,8 +213,86 @@ class RealTopUpProvider(TopUpProvider):
             return data
         return None
 
+    async def _fireloot_lookup(
+        self, uid: str, game: str, label: str
+    ) -> AccountInfo | None:
+        """Real nickname via FireLoot partner /validate. None = try other sources."""
+        if not self.fireloot.configured:
+            return None
+
+        try:
+            products = await self.fireloot.products()
+        except FireLootError as exc:
+            logger.warning(
+                "FireLoot /products failed err=%s msg=%s", exc.code, exc.message
+            )
+            products = []
+
+        skus = self.fireloot.candidate_skus(products, game)
+        if not skus:
+            return None
+
+        for sku in skus:
+            try:
+                data = await self.fireloot.validate(uid, sku)
+            except FireLootError as exc:
+                logger.warning(
+                    "FireLoot /validate failed uid=%s sku=%s err=%s status=%s",
+                    uid,
+                    sku,
+                    exc.code,
+                    exc.status,
+                )
+                continue
+
+            if not data.get("valid"):
+                code = str(data.get("code") or "")
+                if code == "invalid_uid":
+                    return AccountInfo(
+                        found=False,
+                        game=label,
+                        uid=uid,
+                        message="ID ёфт нашуд.",
+                    )
+                if code == "region_unsupported":
+                    return AccountInfo(
+                        found=False,
+                        game=label,
+                        uid=uid,
+                        message=(
+                            "Ин ҳисоб аз минтақаи дигар аст ва барои ин "
+                            "маҳсулот мувофиқ нест."
+                        ),
+                    )
+                # product_not_found / product_unavailable → try next SKU
+                logger.info(
+                    "FireLoot validate uid=%s sku=%s code=%s", uid, sku, code
+                )
+                continue
+
+            player_name = str(data.get("player_name") or "").strip()
+            if data.get("name_checked") and player_name:
+                logger.info(
+                    "FireLoot lookup ok uid=%s sku=%s nickname=%s",
+                    uid,
+                    sku,
+                    player_name,
+                )
+                return AccountInfo(
+                    found=True, nickname=player_name, game=label, uid=uid
+                )
+
+            logger.info("FireLoot name check unavailable uid=%s sku=%s", uid, sku)
+            return None
+
+        return None
+
     async def _lookup_ff_nickname(self, uid: str, label: str) -> AccountInfo | None:
-        """Try FFC (needs key), then free fallbacks. None = hard fail."""
+        """Try FireLoot, then FFC (needs key), then free fallbacks. None = hard fail."""
+        result = await self._fireloot_lookup(uid, "ff", label)
+        if result is not None:
+            return result
+
         ffc_error: str | None = None
         if self.api_key or not self._is_ffc_lookup():
             try:
@@ -320,7 +404,21 @@ class RealTopUpProvider(TopUpProvider):
             if result is not None:
                 return result
 
+        # FireLoot also validates PUBG / Blood Strike / other regional SKUs.
+        result = await self._fireloot_lookup(uid, game, label)
+        if result is not None:
+            return result
+
         # Non-FF games or hard failure on custom endpoint.
+        if not self.api_url:
+            return AccountInfo(
+                found=True,
+                nickname="",
+                game=label,
+                uid=uid,
+                message="Ном санҷида нашуд. Бе санҷиш ID-ро идома диҳед.",
+            )
+
         try:
             if self._is_ffc_lookup():
                 response = await self._ffc_lookup(uid)

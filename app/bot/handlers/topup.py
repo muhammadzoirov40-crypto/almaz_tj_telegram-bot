@@ -548,19 +548,27 @@ async def on_order_pay(
         await safe_answer(call, str(exc), show_alert=True)
         return
 
-    await state.update_data(order_id=order.id, uid=uid, product_id=product_id)
+    order_id = order.id
+    product_name = format_product_button(product)
+    new_balance = _fmt_money(Decimal(user.balance) - Decimal(product.price))
+    currency = product.currency
+
+    await state.update_data(order_id=order_id, uid=uid, product_id=product_id)
     await _clear_topup_state(state)
 
-    product_name = format_product_button(product)
+    # Persist the order (and the balance deduction) BEFORE notifying admins.
+    # Otherwise an error later in this handler rolls the order back while the
+    # admin already has the "accept / reject" message → "Фармоиш ёфт нашуд".
+    await session.commit()
+
     await _notify_admins_balance_order(session, order, product_name)
 
-    new_balance = _fmt_money(Decimal(user.balance) - Decimal(product.price))
     text = (
         "✅ <b>Пардохт анjom ёфт!</b>\n\n"
-        f"📦 Фармоиш: №{order.id}\n"
+        f"📦 Фармоиш: №{order_id}\n"
         f"🎮 {product_name}\n"
         f"🆔 UID: <code>{uid}</code>\n"
-        f"💳 Ҳисоб: {new_balance} {product.currency}\n\n"
+        f"💳 Ҳисоб: {new_balance} {currency}\n\n"
         "⏳ Интизори қабули идора шавед.\n"
         "Дар бораи қабул/рад ба шумо хабар дода мешавад."
     )

@@ -16,10 +16,11 @@ def get_topup_provider() -> TopUpProvider:
     if provider == "real":
         api_url = settings.effective_topup_api_url
         api_key = settings.effective_topup_api_key
-        if not api_url:
+        if not api_url and not settings.fireloot_api_key:
             raise RuntimeError(
-                "TOPUP_PROVIDER=real requires FREE_FIRE_API_URL (or TOPUP_API_URL)"
+                "TOPUP_PROVIDER=real requires FREE_FIRE_API_URL (or TOPUP_API_URL) "
+                "or FIRELOOT_API_KEY"
             )
         # Lookup works without API key on some free endpoints; top-up still needs key.
-        return RealTopUpProvider(api_url, api_key or None)
+        return RealTopUpProvider(api_url or None, api_key or None)
     return MockTopUpProvider()

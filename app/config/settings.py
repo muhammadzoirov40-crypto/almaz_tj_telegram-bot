@@ -6,6 +6,9 @@ from typing import List
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Shown in the bot when .env does not define a payment number.
+DEFAULT_PAYMENT_NUMBER = "+992 002119831"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -37,6 +40,13 @@ class Settings(BaseSettings):
     free_fire_api_url: str = Field(default="", alias="FREE_FIRE_API_URL")
     free_fire_api_key: str = Field(default="", alias="FREE_FIRE_API_KEY")
 
+    # FireLoot partner API (real nickname lookup + top-up orders)
+    fireloot_api_url: str = Field(
+        default="https://partner.firelootshop.com/api/v1",
+        alias="FIRELOOT_API_URL",
+    )
+    fireloot_api_key: str = Field(default="", alias="FIRELOOT_API_KEY")
+
     @property
     def effective_topup_api_url(self) -> str:
         return self.free_fire_api_url or self.topup_api_url
@@ -46,13 +56,19 @@ class Settings(BaseSettings):
         return self.free_fire_api_key or self.topup_api_key
 
     # Manual card payment (shown to user; copy + pay + send receipt)
-    payment_card_number: str = Field(default="", alias="PAYMENT_CARD_NUMBER")
+    payment_card_number: str = Field(
+        default=DEFAULT_PAYMENT_NUMBER, alias="PAYMENT_CARD_NUMBER"
+    )
     payment_card_holder: str = Field(default="", alias="PAYMENT_CARD_HOLDER")
 
     # Balance top-up: Alif + Dushanbe City payment numbers
-    payment_alif_number: str = Field(default="", alias="PAYMENT_ALIF_NUMBER")
+    payment_alif_number: str = Field(
+        default=DEFAULT_PAYMENT_NUMBER, alias="PAYMENT_ALIF_NUMBER"
+    )
     payment_alif_holder: str = Field(default="", alias="PAYMENT_ALIF_HOLDER")
-    payment_ds_phone: str = Field(default="", alias="PAYMENT_DS_PHONE")
+    payment_ds_phone: str = Field(
+        default=DEFAULT_PAYMENT_NUMBER, alias="PAYMENT_DS_PHONE"
+    )
 
     # Providers: "mock" (MVP/dev) or "real" (production)
     payment_provider: str = Field(default="mock", alias="PAYMENT_PROVIDER")

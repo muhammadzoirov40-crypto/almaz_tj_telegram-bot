@@ -36,6 +36,8 @@ alembic upgrade head
 | `ADMIN_IDS` | IDҳои администратор бо вергул ҷудошуда |
 | `PAYMENT_PROVIDER` | `mock` (таҳия) ё `real` |
 | `TOPUP_PROVIDER` | `mock` (таҳия) ё `real` |
+| `FIRELOOT_API_KEY` | Kalidi FireLoot partner (`https://partner.firelootshop.com`) барои номи ҳақиқии бозигар |
+| `PAYMENT_ALIF_NUMBER` | Raqami pardoхt (намуна: `+992 002119831`) |
 
 ## Меъморӣ
 
