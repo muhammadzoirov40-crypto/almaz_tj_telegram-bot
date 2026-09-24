@@ -52,6 +52,7 @@ class MockTopUpProvider(TopUpProvider):
         uid: str,
         product: str,
         order_id: int,
+        sku: str | None = None,
     ) -> TopUpResult:
         reference = f"mocktop_{uuid4().hex[:16]}"
         logger.info(
@@ -523,18 +524,100 @@ class RealTopUpProvider(TopUpProvider):
             return base[: -len("/lookup")] + "/topup"
         return f"{base}/topup"
 
+    _FIRELOOT_ERRORS: dict[str, str] = {
+        "invalid_uid": "ID нодуруст аст.",
+        "zone_required": "Барои ин маҳсулот соҳаи zone лозим аст.",
+        "invalid_zone": "Zone нодуруст аст.",
+        "invalid_request": "Дархост нодуруст.",
+        "unauthorized": "Калиди FireLoot нодуруст.",
+        "insufficient_balance": "Баланс дар FireLoot кофӣ нест.",
+        "product_not_found": "Маҳсулот (SKU) ёфт нашуд.",
+        "product_unavailable": "Ин номинал ҳоло фурӯда нест.",
+        "region_unsupported": "Ин ҳисоб аз минтақаи дигар аст.",
+        "rate_limited": "Дархостҳо зиёданд, дубора кӯшиш кунед.",
+        "service_unavailable": "Хизматрасонӣ муваққатан дастрас нест.",
+        "network": "Хатогии пайвастшавӣ.",
+    }
+
+    async def _fireloot_order(
+        self, uid: str, sku: str, order_id: int, reference: str
+    ) -> TopUpResult:
+        external_id = f"order-{order_id}"
+        try:
+            data = await self.fireloot.order(
+                external_id=external_id, sku=sku, uid=uid
+            )
+        except FireLootError as exc:
+            logger.warning(
+                "FireLoot /order failed order_id=%s sku=%s err=%s status=%s",
+                order_id,
+                sku,
+                exc.code,
+                exc.status,
+            )
+            return TopUpResult(
+                success=False,
+                provider_reference=reference,
+                message=self._FIRELOOT_ERRORS.get(
+                    exc.code, f"FireLoot xatosi: {exc.code}"
+                ),
+            )
+
+        status = str(data.get("status") or "").lower()
+        remote_ref = str(data.get("order_id") or reference)
+        player_name = str(data.get("player_name") or "").strip()
+        logger.info(
+            "FireLoot order order_id=%s sku=%s status=%s ref=%s nick=%s",
+            order_id,
+            sku,
+            status,
+            remote_ref,
+            player_name,
+        )
+
+        if status in {"processing", "completed"}:
+            return TopUpResult(
+                success=True,
+                pending=status == "processing",
+                provider_reference=remote_ref,
+                message="FireLoot: заказ қабул шуд.",
+                raw=data,
+            )
+        if status in {"failed", "refunded"}:
+            return TopUpResult(
+                success=False,
+                provider_reference=remote_ref,
+                message="FireLoot: заказ иҷро нашуд.",
+                raw=data,
+            )
+        return TopUpResult(
+            success=False,
+            provider_reference=remote_ref,
+            message=f"FireLoot: номаълум ҳолат ({status or '—'})",
+            raw=data,
+        )
+
     async def topup(
         self,
         uid: str,
         product: str,
         order_id: int,
+        sku: str | None = None,
     ) -> TopUpResult:
         reference = f"realtop_{order_id}_{uuid4().hex[:8]}"
+
+        # FireLoot partner delivery (preferred): needs a mapped SKU.
+        if sku and self.fireloot.configured:
+            return await self._fireloot_order(uid, sku, order_id, reference)
+
         if not self.api_key:
             return TopUpResult(
                 success=False,
                 provider_reference=reference,
-                message="Калиди API ворид нашудааст (FREE_FIRE_API_KEY).",
+                message=(
+                    "Калиди API ворид нашудааст (FIRELOOT_API_KEY "
+                    "ё FREE_FIRE_API_KEY)."
+                ),
             )
         payload = {
             "player_id": uid,

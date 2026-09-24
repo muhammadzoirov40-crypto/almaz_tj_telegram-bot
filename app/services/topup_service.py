@@ -55,12 +55,14 @@ class TopUpService:
             raise TopUpError(f"Order {order_id} not found")
 
         product_name = order.product.name if order.product else str(order.product_id)
+        sku = order.product.sku if order.product else None
 
         try:
             result = await self.provider.topup(
                 uid=order.free_fire_uid,
                 product=product_name,
                 order_id=order.id,
+                sku=sku,
             )
         except Exception as exc:
             logger.exception("Top-up request failed order_id=%s", order_id)
@@ -68,6 +70,21 @@ class TopUpService:
                 order_id, reason=str(exc)
             )
             assert order is not None
+            return order
+
+        if result.success and result.pending:
+            # Delivered asynchronously (FireLoot): stay in PROCESSING and let
+            # the poller watch GET /order/:id until completed/failed/refunded.
+            if order.provider_order_id is None:
+                await self.orders.set_provider_order_id(
+                    order.id, result.provider_reference
+                )
+            logger.info(
+                "Top-up submitted order_id=%s sku=%s ref=%s",
+                order_id,
+                sku,
+                result.provider_reference,
+            )
             return order
 
         if result.success:

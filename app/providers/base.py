@@ -64,6 +64,8 @@ class TopUpResult:
     provider_reference: str
     message: str = ""
     raw: Optional[dict[str, Any]] = None
+    # Submitted to the provider, completion arrives asynchronously.
+    pending: bool = False
 
 
 @dataclass(slots=True)
@@ -87,6 +89,7 @@ class TopUpProvider(ABC):
         uid: str,
         product: str,
         order_id: int,
+        sku: Optional[str] = None,
     ) -> TopUpResult:
         raise NotImplementedError
 

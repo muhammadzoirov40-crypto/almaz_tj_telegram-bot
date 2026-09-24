@@ -9,21 +9,30 @@ from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import ErrorEvent
+from sqlalchemy import select, text
+from sqlalchemy.orm import selectinload
 
 from app.bot.handlers import router as handlers_router
 from app.bot.keyboards.main import get_bot_commands
 from app.bot.middlewares import DatabaseMiddleware, UserMiddleware
 from app.config import settings
+from app.constants import OrderStatus
 from app.database.database import (
     close_db_connection,
     get_session_factory,
     init_db_connection,
+    session_scope,
 )
-from app.database.models import Product
+from app.database.models import Order, Product
 from app.services.notification_service import notification_service
 from app.utils.logger import configure_logging, get_logger
 
 logger = get_logger(__name__)
+
+# FireLoot delivers orders asynchronously — poll GET /order/:id for status.
+FIRELOOT_POLL_INTERVAL = 15
+
+_background_tasks: list[asyncio.Task] = []
 
 DEFAULT_PRODUCTS = [
     # Free Fire — FireLoot CIS (diamonds)
@@ -88,6 +97,16 @@ async def ensure_schema() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+    # create_all() does not alter existing tables — add the SKU column if the
+    # database was created by an older version of the code.
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(
+                text("ALTER TABLE products ADD COLUMN IF NOT EXISTS sku VARCHAR(64)")
+            )
+    except Exception:
+        logger.warning("Could not ensure products.sku column", exc_info=True)
+
     factory = get_session_factory()
     async with factory() as session:
         result = await session.execute(select(Product))
@@ -119,6 +138,142 @@ async def ensure_schema() -> None:
         logger.info("Synced products with DEFAULT_PRODUCTS")
 
 
+async def _sync_fireloot_catalog_loop() -> None:
+    """Keep product → SKU mapping fresh (catalogue changes every 10-15 min)."""
+    from app.services.fireloot_catalog import SYNC_INTERVAL, sync_product_skus
+
+    while True:
+        try:
+            async with session_scope() as session:
+                assigned = await sync_product_skus(session)
+                if assigned:
+                    logger.info("FireLoot SKU mapping: %s", assigned)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("FireLoot catalogue sync failed")
+        await asyncio.sleep(SYNC_INTERVAL)
+
+
+async def _refund_order(session, order: Order, reason: str) -> bool:
+    from app.services.order_service import OrderService
+    from app.services.user_service import UserService
+
+    order_service = OrderService(session)
+    if order.user_id is None:
+        return False
+    if not await order_service.was_balance_deducted(order.id):
+        return False
+    reference = f"fireloot:order:{order.id}"
+    if await order_service.transactions.get_by_reference_id(reference) is not None:
+        return False
+    await UserService(session).add_balance(
+        user_id=order.user_id,
+        amount=Decimal(order.amount),
+        description=f"Refund order #{order.id}: {reason}",
+        reference_id=reference,
+    )
+    logger.info(
+        "Refunded order_id=%s amount=%s reason=%s",
+        order.id,
+        order.amount,
+        reason,
+    )
+    return True
+
+
+async def _poll_fireloot_orders(bot: Bot) -> None:
+    """Watch FireLoot orders stuck in PROCESSING (GET /order/:id)."""
+    from app.providers.fireloot import FireLootClient, FireLootError
+    from app.services.order_service import OrderService
+
+    while True:
+        await asyncio.sleep(FIRELOOT_POLL_INTERVAL)
+        try:
+            client = FireLootClient()
+            if not client.configured:
+                continue
+
+            async with session_scope() as session:
+                result = await session.execute(
+                    select(Order)
+                    .options(selectinload(Order.product), selectinload(Order.user))
+                    .where(Order.status == OrderStatus.PROCESSING)
+                    .where(Order.provider_order_id.like("FL-%"))
+                    .order_by(Order.id.asc())
+                    .limit(25)
+                )
+                orders = list(result.scalars().all())
+                if not orders:
+                    continue
+
+                order_service = OrderService(session)
+                for order in orders:
+                    try:
+                        data = await client.order_status(
+                            order.provider_order_id or ""
+                        )
+                    except FireLootError as exc:
+                        logger.warning(
+                            "FireLoot status failed ref=%s err=%s",
+                            order.provider_order_id,
+                            exc.code,
+                        )
+                        continue
+
+                    status = str(data.get("status") or "").lower()
+                    product_name = order.product.name if order.product else ""
+                    user = order.user
+
+                    if status == "completed":
+                        updated = await order_service.mark_completed(order.id)
+                        if updated is None:
+                            continue
+                        logger.info(
+                            "FireLoot order completed order_id=%s",
+                            order.id,
+                        )
+                        if user is not None:
+                            await notification_service.safe_send(
+                                user.telegram_id,
+                                f"✅ <b>Фармоиши №{order.id} иҷро шуд!</b>\n\n"
+                                f"🎮 {product_name}\n"
+                                f"🆔 UID: <code>{order.free_fire_uid}</code>\n\n"
+                                "Донат ба ҳисоби шумо ворид шуд.",
+                            )
+                    elif status in {"failed", "refunded"}:
+                        refunded = await _refund_order(session, order, status)
+                        updated = await order_service.mark_failed(
+                            order.id, reason=f"fireloot:{status}"
+                        )
+                        if updated is None:
+                            continue
+                        logger.warning(
+                            "FireLoot order %s order_id=%s refunded=%s",
+                            status,
+                            order.id,
+                            refunded,
+                        )
+                        if user is not None:
+                            note = (
+                                f"\n💰 Маблағ ({order.amount} {order.currency}) "
+                                "ба баланси шумо барқарор шуд."
+                                if refunded
+                                else ""
+                            )
+                            await notification_service.safe_send(
+                                user.telegram_id,
+                                f"❌ <b>Фармоиши №{order.id} ноком шуд</b>\n\n"
+                                f"🎮 {product_name}\n"
+                                f"🆔 UID: <code>{order.free_fire_uid}</code>"
+                                f"{note}",
+                            )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("FireLoot order polling failed")
+
+
 async def on_startup(bot: Bot) -> None:
     await init_db_connection()
     await ensure_schema()
@@ -126,10 +281,18 @@ async def on_startup(bot: Bot) -> None:
 
     commands = await get_bot_commands()
     await bot.set_my_commands(commands)
+
+    if settings.fireloot_api_key:
+        _background_tasks.append(asyncio.create_task(_sync_fireloot_catalog_loop()))
+        logger.info("FireLoot catalogue sync started")
+    _background_tasks.append(asyncio.create_task(_poll_fireloot_orders(bot)))
     logger.info("Bot started, commands registered")
 
 
 async def on_shutdown(bot: Bot) -> None:
+    for task in _background_tasks:
+        task.cancel()
+    _background_tasks.clear()
     await close_db_connection()
     logger.info("Bot stopped")
 
