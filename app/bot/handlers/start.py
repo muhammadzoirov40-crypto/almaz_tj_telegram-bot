@@ -13,6 +13,7 @@ logger = get_logger(__name__)
 router = Router(name="start")
 
 START_TEXT = (
+    "Салом, хуш омадед ба боти DANAT.TJ 🏆\n\n"
     "🎮 <b>DANAT.TJ ⚡</b>\n\n"
     "Арзонтарин алмаз дар Тоҷикистон\n"
     "Free Fire • PUBG • Stars\n"
