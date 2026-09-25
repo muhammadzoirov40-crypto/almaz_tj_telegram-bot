@@ -20,28 +20,19 @@ CHANNEL_TEXT = "📢 Канал"
 
 def get_main_menu_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
     rows = [
-        [
-            InlineKeyboardButton(text=TOPUP_TEXT, callback_data="menu:topup"),
-            InlineKeyboardButton(text=ORDERS_TEXT, callback_data="menu:orders"),
-        ],
-        [
-            InlineKeyboardButton(text=PROFILE_TEXT, callback_data="menu:profile"),
-            InlineKeyboardButton(text=BALANCE_TEXT, callback_data="menu:balance"),
-        ],
-        [
-            InlineKeyboardButton(text=PROMO_TEXT, callback_data="menu:promo"),
-            InlineKeyboardButton(text=SUPPORT_TEXT, callback_data="menu:support"),
-        ],
+        [InlineKeyboardButton(text=TOPUP_TEXT, callback_data="menu:topup")],
         [
             InlineKeyboardButton(
                 text="💳 Пур кардани баланс", callback_data="balance:topup"
             ),
+            InlineKeyboardButton(text=BALANCE_TEXT, callback_data="menu:balance"),
         ],
+        [InlineKeyboardButton(text=ORDERS_TEXT, callback_data="menu:orders")],
         [
-            InlineKeyboardButton(
-                text=CHANNEL_TEXT, url="https://t.me/_ff_almaz_tj_"
-            ),
+            InlineKeyboardButton(text=PROMO_TEXT, callback_data="menu:promo"),
+            InlineKeyboardButton(text=PROFILE_TEXT, callback_data="menu:profile"),
         ],
+        [InlineKeyboardButton(text=SUPPORT_TEXT, callback_data="menu:support")],
     ]
     if is_admin:
         rows.append(
