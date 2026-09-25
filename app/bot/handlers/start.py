@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
-from aiogram.types import Message
+from aiogram.types import ChatMemberUpdated, Message
 
 from app.bot.keyboards import get_main_menu_keyboard
 from app.services.user_service import UserService
@@ -64,4 +64,16 @@ async def cmd_menu(message: Message, db_user=None) -> None:
     await message.answer(
         text,
         reply_markup=get_main_menu_keyboard(is_admin=is_admin),
+    )
+
+
+@router.my_chat_member()
+async def on_chat_member_update(event: ChatMemberUpdated) -> None:
+    """Log chat id when bot is added to a channel (used to set OTZIF_CHANNEL_ID)."""
+    logger.info(
+        "Chat member update: chat_id=%s type=%s status=%s by=%s",
+        event.chat.id,
+        event.chat.type,
+        event.new_chat_member.status,
+        event.from_user.id if event.from_user else None,
     )

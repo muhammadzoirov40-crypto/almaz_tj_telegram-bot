@@ -34,6 +34,7 @@ from app.services.topup_service import TopUpService
 from app.services.user_service import UserService
 from app.utils.logger import get_logger
 from app.bot.utils import safe_answer, safe_edit_text
+from app.config import settings
 
 logger = get_logger(__name__)
 
@@ -233,6 +234,15 @@ async def admin_balance_topup_accept(call: CallbackQuery, session=None) -> None:
     if request.user is not None:
         await notification_service.safe_send(
             request.user.telegram_id,
+            f"✅ <b>Шарҷ қабул шуд!</b>\n\n"
+            f"📦 Дархост: №{request.id}\n"
+            f"💰 Илова шуд: {request.amount} {request.currency}\n"
+            f"💳 Баланс: <b>{user.balance} TJS</b>",
+        )
+
+    if settings.otzif_channel_id:
+        await notification_service.safe_send(
+            settings.otzif_channel_id,
             f"✅ <b>Шарҷ қабул шуд!</b>\n\n"
             f"📦 Дархост: №{request.id}\n"
             f"💰 Илова шуд: {request.amount} {request.currency}\n"

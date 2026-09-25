@@ -80,6 +80,9 @@ class Settings(BaseSettings):
     )
     payment_ds_url: str = Field(default="", alias="PAYMENT_DS_URL")
 
+    # Review channel (OTZIF_DANAT_TJ) — approved top-ups are posted there.
+    otzif_channel_id: int = Field(default=0, alias="OTZIF_CHANNEL_ID")
+
     # Providers: "mock" (MVP/dev) or "real" (production)
     payment_provider: str = Field(default="mock", alias="PAYMENT_PROVIDER")
     topup_provider: str = Field(default="mock", alias="TOPUP_PROVIDER")
