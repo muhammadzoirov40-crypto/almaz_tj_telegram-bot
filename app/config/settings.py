@@ -66,6 +66,11 @@ class Settings(BaseSettings):
         default=DEFAULT_PAYMENT_NUMBER, alias="PAYMENT_ALIF_NUMBER"
     )
     payment_alif_holder: str = Field(default="", alias="PAYMENT_ALIF_HOLDER")
+    # Alif card number + optional "open payment" link (inline URL button)
+    payment_alif_card_number: str = Field(
+        default="", alias="PAYMENT_ALIF_CARD_NUMBER"
+    )
+    payment_alif_url: str = Field(default="", alias="PAYMENT_ALIF_URL")
     payment_ds_phone: str = Field(
         default=DEFAULT_PAYMENT_NUMBER, alias="PAYMENT_DS_PHONE"
     )

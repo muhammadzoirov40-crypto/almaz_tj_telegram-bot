@@ -183,7 +183,11 @@ def _format_payment_number(raw: str) -> str:
 
 def _payment_number_for(method: str) -> str:
     if method == BalanceTopUpMethod.ALIF:
-        raw = settings.payment_alif_number or settings.payment_card_number
+        raw = (
+            settings.payment_alif_card_number
+            or settings.payment_alif_number
+            or settings.payment_card_number
+        )
     else:
         raw = (
             settings.payment_ds_card_number
@@ -194,6 +198,8 @@ def _payment_number_for(method: str) -> str:
 
 
 def _payment_url_for(method: str) -> str | None:
+    if method == BalanceTopUpMethod.ALIF:
+        return settings.payment_alif_url or None
     if method == BalanceTopUpMethod.DS:
         return settings.payment_ds_url or None
     return None
