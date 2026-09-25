@@ -24,6 +24,15 @@ START_TEXT = (
 )
 
 
+def _user_block(user) -> str:
+    name = user.first_name or user.username or "—"
+    return (
+        f"👤 Ном: <b>{name}</b>\n"
+        f"🆔 ID: <code>{user.telegram_id}</code>\n"
+        f"💰 Баланс: <b>{user.balance} TJS</b>\n\n"
+    )
+
+
 @router.message(CommandStart())
 async def cmd_start(
     message: Message,
@@ -41,7 +50,7 @@ async def cmd_start(
         logger.info("User created via /start telegram_id=%s", message.from_user.id)
 
     await message.answer(
-        START_TEXT,
+        _user_block(user) + START_TEXT,
         reply_markup=get_main_menu_keyboard(is_admin=user.is_admin),
     )
 
@@ -50,7 +59,10 @@ async def cmd_start(
 @router.message(F.text == "🏠 Асосӣ")
 async def cmd_menu(message: Message, db_user=None) -> None:
     is_admin = db_user.is_admin if db_user else False
+    text = "🏠 <b>Менюи DANAT.TJ</b>\n\n"
+    if db_user:
+        text = _user_block(db_user) + text
     await message.answer(
-        "🏠 <b>Менюи DANAT.TJ</b>",
+        text,
         reply_markup=get_main_menu_keyboard(is_admin=is_admin),
     )
