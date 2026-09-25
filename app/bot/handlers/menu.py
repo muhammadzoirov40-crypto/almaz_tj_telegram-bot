@@ -67,6 +67,9 @@ async def on_promo(message: Message) -> None:
     await message.answer(
         "🎁 <b>Пешниҳодҳо</b>\n\n"
         "Ҳоло пешниҳоди фаъол нест. Баъдтар мебинед!\n\n"
+        "🏆 <b>Ҷоизаи моҳина:</b> ҳар моҳ номаи он корбар, ки дар мудда"
+        "ти 1 моҳ аз ҳама зиёд донат кардааст, ғолиб эълон мешавад ва "
+        "<b>туҳфа</b> мегирад!\n\n"
         "📢 Канал: <a href=\"https://t.me/_ff_almaz_tj_\">@_ff_almaz_tj_</a>"
     )
 
@@ -81,6 +84,9 @@ async def on_promo_callback(
     await safe_edit_text(call.message, 
         "🎁 <b>Пешниҳодҳо</b>\n\n"
         "Ҳоло пешниҳоди фаъол нест. Баъдтар мебинед!\n\n"
+        "🏆 <b>Ҷоизаи моҳина:</b> ҳар моҳ номаи он корбар, ки дар мудда"
+        "ти 1 моҳ аз ҳама зиёд донат кардааст, ғолиб эълон мешавад ва "
+        "<b>туҳфа</b> мегирад!\n\n"
         "📢 Канал: <a href=\"https://t.me/_ff_almaz_tj_\">@_ff_almaz_tj_</a>",
         reply_markup=get_main_menu_keyboard(
             is_admin=db_user.is_admin if db_user else False
