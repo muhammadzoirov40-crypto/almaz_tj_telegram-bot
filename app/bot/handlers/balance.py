@@ -1,12 +1,13 @@
 ﻿from __future__ import annotations
 
 from decimal import Decimal
+from pathlib import Path
 from uuid import uuid4
 
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, FSInputFile, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.keyboards import (
@@ -41,6 +42,18 @@ PAYMENT_METHODS = {
     BalanceTopUpMethod.DS: "🏙 Dushanbe City",
     BalanceTopUpMethod.ALIF: "💳 Alif",
 }
+
+CARDS_DIR = Path(__file__).resolve().parents[3] / "assets" / "cards"
+
+
+def _card_photo_path(method: str) -> Path | None:
+    stems = ["ds"] if method == BalanceTopUpMethod.DS else ["ds", "alif"]
+    for stem in stems:
+        for ext in (".jpg", ".jpeg", ".png", ".webp"):
+            path = CARDS_DIR / f"{stem}{ext}"
+            if path.is_file():
+                return path
+    return None
 
 
 def _balance_text(user: User) -> str:
@@ -466,7 +479,22 @@ async def on_balance_confirm(
         "Лутфан <b>расми чек</b> ё <b>матни чек</b> фиристед.\n"
         "Идора чекро санҷида, ба баланс илова мекунад."
     )
-    await safe_edit_text(call.message, text, reply_markup=get_balance_receipt_keyboard())
+    card = _card_photo_path(method)
+    if card:
+        await safe_edit_text(
+            call.message,
+            "💳 Расми корти пардохт:",
+            reply_markup=None,
+        )
+        await call.message.answer_photo(
+            FSInputFile(card),
+            caption=text,
+            reply_markup=get_balance_receipt_keyboard(),
+        )
+    else:
+        await safe_edit_text(
+            call.message, text, reply_markup=get_balance_receipt_keyboard()
+        )
     await safe_answer(call, "Чекро фиристед")
 
 
