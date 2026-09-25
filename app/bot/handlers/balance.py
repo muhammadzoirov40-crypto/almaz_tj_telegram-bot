@@ -336,7 +336,8 @@ async def on_payment_method(call: CallbackQuery, state: FSMContext) -> None:
         )
         photo = _card_photo_path(method.value)
         if photo:
-            # Card photo carries the phone-request caption + reply keyboard
+            # Card photo first, then a fresh message carries the reply keyboard
+            # (Telegram only shows the reply keyboard on the latest message).
             await safe_edit_text(
                 call.message,
                 "🏙 <b>Усул: Dushanbe City</b>\n\n👇 Расми картаро нигаред:",
@@ -345,6 +346,10 @@ async def on_payment_method(call: CallbackQuery, state: FSMContext) -> None:
             await call.message.answer_photo(
                 FSInputFile(photo),
                 caption=phone_request,
+                reply_markup=None,
+            )
+            await call.message.answer(
+                "👇 Тугмаи зеринро зер кунед:",
                 reply_markup=get_share_phone_keyboard(),
             )
         else:

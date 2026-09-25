@@ -573,7 +573,7 @@ async def on_order_pay(
         "Дар бораи қабул/рад ба шумо хабар дода мешавад."
     )
     await safe_edit_text(
-        call.message, text, reply_markup=get_payment_receipt_keyboard()
+        call.message, text, reply_markup=get_payment_receipt_keyboard(order_id)
     )
     await safe_answer(call, "Пардохт шуд!")
 

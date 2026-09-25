@@ -25,7 +25,7 @@ def get_share_phone_keyboard() -> ReplyKeyboardMarkup:
             [KeyboardButton(text=CANCEL_TOPUP_TEXT)],
         ],
         resize_keyboard=True,
-        one_time_keyboard=True,
+        one_time_keyboard=False,
         input_field_placeholder="+992XXXXXXXXX",
     )
 
