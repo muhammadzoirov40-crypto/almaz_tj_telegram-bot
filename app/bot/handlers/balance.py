@@ -1,12 +1,13 @@
 ﻿from __future__ import annotations
 
 from decimal import Decimal
+from pathlib import Path
 from uuid import uuid4
 
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, FSInputFile, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.keyboards import (
@@ -41,6 +42,17 @@ PAYMENT_METHODS = {
     BalanceTopUpMethod.DS: "🏙 Dushanbe City",
     BalanceTopUpMethod.ALIF: "💳 Alif",
 }
+
+CARDS_DIR = Path(__file__).resolve().parents[3] / "assets" / "cards"
+
+
+def _card_photo_path(method: str) -> Path | None:
+    stem = "ds" if method == BalanceTopUpMethod.DS else "alif"
+    for ext in (".jpg", ".jpeg", ".png", ".webp"):
+        path = CARDS_DIR / f"{stem}{ext}"
+        if path.is_file():
+            return path
+    return None
 
 
 def _balance_text(user: User) -> str:
@@ -183,12 +195,11 @@ def _payment_holder_for(method: str) -> str:
     return settings.payment_card_holder or ""
 
 
-async def _show_payment_instructions(
-    call: CallbackQuery,
-    state: FSMContext,
+def _instructions_text(
     amount: Decimal,
     method: str,
-) -> None:
+    phone: str | None = None,
+) -> str:
     method_label = PAYMENT_METHODS.get(method, method)
     number = _payment_number_for(method)
     holder = _payment_holder_for(method)
@@ -196,13 +207,18 @@ async def _show_payment_instructions(
     lines = [
         f"💰 <b>Маблағ:</b> {amount} TJS",
         f"💳 <b>Усул:</b> {method_label}",
-        "",
-        "📄 <b>Рақами пардохт:</b>",
-        f"<code>{number}</code>",
     ]
+    if phone:
+        lines.append(f"📱 <b>Рақами шумо:</b> <code>{phone}</code>")
+    lines.extend(
+        [
+            "",
+            "📄 <b>Рақами пардохт:</b>",
+            f"<code>{number}</code>",
+        ]
+    )
     if holder:
         lines.append(f"👤 {holder}")
-
     lines.extend(
         [
             "",
@@ -212,14 +228,39 @@ async def _show_payment_instructions(
             "4️⃣ Чекро фиристед → админ санҷида, баланс илова мекунад",
         ]
     )
+    return "\n".join(lines)
+
+
+async def _show_payment_instructions(
+    call: CallbackQuery,
+    state: FSMContext,
+    amount: Decimal,
+    method: str,
+) -> None:
+    method_label = PAYMENT_METHODS.get(method, method)
+    text = _instructions_text(amount, method)
 
     await state.update_data(method=method, amount=str(amount))
     await state.set_state(BalanceTopUpStates.confirming)
-    await safe_edit_text(
-        call.message,
-        "\n".join(lines),
-        reply_markup=get_balance_confirm_keyboard(),
-    )
+
+    photo = _card_photo_path(method)
+    if photo:
+        await safe_edit_text(
+            call.message,
+            f"💳 <b>Усул: {method_label}</b>\n\n👇 Расми картаро нигаред:",
+            reply_markup=None,
+        )
+        await call.message.answer_photo(
+            FSInputFile(photo),
+            caption=text,
+            reply_markup=get_balance_confirm_keyboard(),
+        )
+    else:
+        await safe_edit_text(
+            call.message,
+            text,
+            reply_markup=get_balance_confirm_keyboard(),
+        )
 
 
 @router.callback_query(F.data.startswith("paymethod:"))
@@ -251,19 +292,32 @@ async def on_payment_method(call: CallbackQuery, state: FSMContext) -> None:
     if method == BalanceTopUpMethod.DS:
         await state.update_data(method=method.value)
         await state.set_state(BalanceTopUpStates.waiting_phone)
-        # Inline buttons are removed; reply keyboard asks for the user's own number
-        await safe_edit_text(
-            call.message,
+        phone_request = (
             "🏙 <b>Dushanbe City</b>\n\n"
             "📱 Тугмаи зеринро зер кунед ва <b>рақами худатон</b>-ро "
             "фиристед (Telegram рақами шуморо мефиристад).\n\n"
-            "Ё рақамро бо даст нависед: <code>+992002119831</code>",
-            reply_markup=None,
+            "Ё рақамро бо даст нависед: <code>+992002119831</code>"
         )
-        await call.message.answer(
-            "Рақами худатонро интихоб кунед:",
-            reply_markup=get_share_phone_keyboard(),
-        )
+        photo = _card_photo_path(method.value)
+        if photo:
+            # Card photo carries the phone-request caption + reply keyboard
+            await safe_edit_text(
+                call.message,
+                "🏙 <b>Усул: Dushanbe City</b>\n\n👇 Расми картаро нигаред:",
+                reply_markup=None,
+            )
+            await call.message.answer_photo(
+                FSInputFile(photo),
+                caption=phone_request,
+                reply_markup=get_share_phone_keyboard(),
+            )
+        else:
+            # Inline buttons are removed; reply keyboard asks for the user's own number
+            await safe_edit_text(call.message, phone_request, reply_markup=None)
+            await call.message.answer(
+                "Рақами худатонро интихоб кунед:",
+                reply_markup=get_share_phone_keyboard(),
+            )
         await safe_answer(call)
         return
 
@@ -291,32 +345,10 @@ async def _finish_phone(
     await state.update_data(phone=phone, method=BalanceTopUpMethod.DS.value)
     await state.set_state(BalanceTopUpStates.confirming)
 
-    method_label = PAYMENT_METHODS[BalanceTopUpMethod.DS]
-    number = _payment_number_for(BalanceTopUpMethod.DS.value)
-    holder = _payment_holder_for(BalanceTopUpMethod.DS.value)
-
-    lines = [
-        f"💰 <b>Маблағ:</b> {amount} TJS",
-        f"💳 <b>Усул:</b> {method_label}",
-        f"📱 <b>Рақами шумо:</b> <code>{phone}</code>",
-        "",
-        "📄 <b>Рақами пардохт:</b>",
-        f"<code>{number}</code>",
-    ]
-    if holder:
-        lines.append(f"👤 {holder}")
-    lines.extend(
-        [
-            "",
-            "1️⃣ Ба ин рақам маблағ фиристед",
-            "2️⃣ Пас тугмаи «✅ Тасдиқи пардохт»-ро зер кунед",
-            "3️⃣ Бот чек (расм/матн) мепурсад",
-            "4️⃣ Чекро фиристед → админ санҷида, баланс илова мекунад",
-        ]
-    )
+    text = _instructions_text(amount, BalanceTopUpMethod.DS.value, phone=phone)
 
     await message.answer(
-        "\n".join(lines),
+        text,
         reply_markup=get_balance_confirm_keyboard(),
     )
 
