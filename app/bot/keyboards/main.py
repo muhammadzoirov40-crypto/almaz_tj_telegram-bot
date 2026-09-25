@@ -27,9 +27,9 @@ def get_main_menu_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
             ),
             InlineKeyboardButton(text=BALANCE_TEXT, callback_data="menu:balance"),
         ],
-        [InlineKeyboardButton(text=ORDERS_TEXT, callback_data="menu:orders")],
+        [InlineKeyboardButton(text=PROMO_TEXT, callback_data="menu:promo")],
         [
-            InlineKeyboardButton(text=PROMO_TEXT, callback_data="menu:promo"),
+            InlineKeyboardButton(text=ORDERS_TEXT, callback_data="menu:orders"),
             InlineKeyboardButton(text=PROFILE_TEXT, callback_data="menu:profile"),
         ],
         [InlineKeyboardButton(text=SUPPORT_TEXT, callback_data="menu:support")],
