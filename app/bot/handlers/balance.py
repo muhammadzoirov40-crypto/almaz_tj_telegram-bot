@@ -482,15 +482,6 @@ async def _send_topup_to_admin(
         return
 
     method_label = PAYMENT_METHODS.get(request.method, request.method)
-    user_label = "@?"
-    if request.user is not None:
-        user_label = (
-            f"@{request.user.username}"
-            if request.user.username
-            else str(request.user.telegram_id)
-        )
-    elif db_user is not None:
-        user_label = f"@{db_user.username}" if db_user.username else str(db_user.telegram_id)
 
     lines = [
         "📩 <b>Чеки шарҷи баланс</b>",
@@ -499,9 +490,6 @@ async def _send_topup_to_admin(
         f"💰 Маблағ: <b>{request.amount} {request.currency}</b>",
         f"💳 Усул: {method_label}",
     ]
-    if request.phone:
-        lines.append(f"📱 Телефон: <code>{request.phone}</code>")
-    lines.append(f"👤 Клиент: {user_label}")
     if receipt_text:
         lines.extend(["", f"✉️ Чек:\n{receipt_text[:400]}"])
     lines.extend(["", "Қабул ё рад кунед:"])
