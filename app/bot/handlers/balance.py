@@ -207,12 +207,16 @@ def _payment_number_for(method: str) -> str:
     return _format_payment_number(raw) or DEFAULT_PAYMENT_NUMBER
 
 
-def _payment_url_for(method: str) -> str | None:
+def _payment_url_for(method: str, amount: Decimal | None = None) -> str | None:
     if method == BalanceTopUpMethod.ALIF:
-        return settings.payment_alif_url or None
-    if method == BalanceTopUpMethod.DS:
-        return settings.payment_ds_url or None
-    return None
+        template = settings.payment_alif_url or None
+    else:
+        template = settings.payment_ds_url or None
+    if not template:
+        return None
+    if amount is not None and "{amount}" in template:
+        return template.replace("{amount}", f"{amount:.2f}")
+    return template
 
 
 def _payment_holder_for(method: str) -> str:
@@ -282,7 +286,7 @@ async def _show_payment_instructions(
             FSInputFile(photo),
             caption=text,
             reply_markup=get_balance_confirm_keyboard(
-                url=_payment_url_for(method)
+                url=_payment_url_for(method, amount)
             ),
         )
     else:
@@ -290,7 +294,7 @@ async def _show_payment_instructions(
             call.message,
             text,
             reply_markup=get_balance_confirm_keyboard(
-                url=_payment_url_for(method)
+                url=_payment_url_for(method, amount)
             ),
         )
 
@@ -382,7 +386,7 @@ async def _finish_phone(
     await message.answer(
         text,
         reply_markup=get_balance_confirm_keyboard(
-            url=_payment_url_for(BalanceTopUpMethod.DS.value)
+            url=_payment_url_for(BalanceTopUpMethod.DS.value, amount)
         ),
     )
 
