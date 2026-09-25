@@ -13,7 +13,7 @@ logger = get_logger(__name__)
 router = Router(name="start")
 
 START_TEXT = (
-    "🎮 <b>ALMAZ TJ ⚡</b>\n\n"
+    "🎮 <b>DANAT.TJ ⚡</b>\n\n"
     "Арзонтарин алмаз дар Тоҷикистон\n"
     "Free Fire • PUBG • Stars\n"
     "ва дигар бозиҳо\n"
@@ -51,6 +51,6 @@ async def cmd_start(
 async def cmd_menu(message: Message, db_user=None) -> None:
     is_admin = db_user.is_admin if db_user else False
     await message.answer(
-        "🏠 <b>Менюи ALMAZ TJ</b>",
+        "🏠 <b>Менюи DANAT.TJ</b>",
         reply_markup=get_main_menu_keyboard(is_admin=is_admin),
     )

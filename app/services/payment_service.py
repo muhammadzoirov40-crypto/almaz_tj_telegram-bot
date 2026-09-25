@@ -55,7 +55,7 @@ class PaymentService:
             order_id=order.id,
             amount=order.amount,
             currency=order.currency,
-            description=f"ALMAZ TJ order #{order.id}",
+            description=f"DANAT.TJ order #{order.id}",
         )
         try:
             response = await self.provider.create_payment(request)

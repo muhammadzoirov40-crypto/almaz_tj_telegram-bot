@@ -128,7 +128,7 @@ async def admin_stats(call: CallbackQuery, session=None) -> None:
     )
 
     text = (
-        "📊 <b>Омори ALMAZ TJ</b>\n\n"
+        "📊 <b>Омори DANAT.TJ</b>\n\n"
         f"👥 Корбарон: {users_count or 0}\n"
         f"📦 Фармоишҳо: {orders_count or 0}\n"
         f"✅ Иҷрошуда: {completed or 0}\n"

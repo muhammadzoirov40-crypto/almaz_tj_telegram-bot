@@ -41,7 +41,7 @@ def format_orders(orders: list[Order]) -> str:
     if not orders:
         return "📦 Шумо ҳанӯз фармоишҳо надоред."
 
-    lines = ["📦 <b>Фармоишҳои ман</b> — ALMAZ TJ ⚡\n"]
+    lines = ["📦 <b>Фармоишҳои ман</b> — DANAT.TJ ⚡\n"]
     for order in orders:
         icon = STATUS_ICONS.get(order.status, "ℹ️")
         status_label = STATUS_LABELS.get(order.status, order.status)
@@ -134,11 +134,11 @@ async def on_back_menu(
     try:
         await safe_edit_text(
             call.message,
-            "🏠 <b>Менюи ALMAZ TJ</b>",
+            "🏠 <b>Менюи DANAT.TJ</b>",
             reply_markup=get_main_menu_keyboard(is_admin=is_admin),
         )
     except Exception:
         await call.message.answer(
-            "🏠 <b>Менюи ALMAZ TJ</b>",
+            "🏠 <b>Менюи DANAT.TJ</b>",
             reply_markup=get_main_menu_keyboard(is_admin=is_admin),
         )

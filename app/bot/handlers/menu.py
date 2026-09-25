@@ -22,7 +22,7 @@ def _profile_text(user) -> str:
         f"📛 Номи корбар: @{user.username if user.username else '-'}\n"
         f"💰 Баланс: <b>{user.balance} TJS</b>\n"
         f"📅 Қайд: {user.created_at:%Y-%m-%d}\n\n"
-        "ALMAZ TJ ⚡ — Арзонтарин алмаз дар Тоҷикистон"
+        "DANAT.TJ ⚡ — Арзонтарин алмаз дар Тоҷикистон"
     )
 
 

@@ -55,7 +55,7 @@ def _ff_category(name: str) -> str:
     return "vouchers"
 
 GAME_PROMPT = (
-    "💎 <b>ALMAZ TJ — Донат</b>\n\n"
+    "💎 <b>DANAT.TJ — Донат</b>\n\n"
     "Бозиро интихоб кунед:"
 )
 
@@ -651,7 +651,7 @@ async def on_order_cancel(
         reply_markup=None,
     )
     await call.message.answer(
-        "🏠 <b>Менюи ALMAZ TJ</b>",
+        "🏠 <b>Менюи DANAT.TJ</b>",
         reply_markup=get_main_menu_keyboard(),
     )
     await safe_answer(call)

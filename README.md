@@ -1,8 +1,8 @@
-# ALMAZ TJ ⚡ — Free Fire / PUBG / Stars ва дигар бозиҳо Top-Up Bot
+# DANAT.TJ ⚡ — Free Fire / PUBG / Stars ва дигар бозиҳо Top-Up Bot
 
 Telegram-бот барои пур кардани (донат) бозиҳо дар Тоҷикистон (aiogram 3 + SQLAlchemy async).
 
-**ALMAZ TJ ⚡** — Арзонтарин алмаз дар Тоҷикистон  
+**DANAT.TJ ⚡** — Арзонтарин алмаз дар Тоҷикистон  
 Free Fire • PUBG • Stars  
 ва дигар бозиҳо  
 1-5 дақиқа • 100% беҳтар  

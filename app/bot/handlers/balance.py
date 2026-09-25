@@ -69,7 +69,7 @@ def _balance_text(user: User) -> str:
     return (
         f"💰 <b>Баланс:</b> {user.balance} TJS\n\n"
         "Барои афзоиш «💳 Шарҷ кунед»-ро зер кунед.\n"
-        "ALMAZ TJ ⚡ — 1-5 дақиқа • 100% беҳтар"
+        "DANAT.TJ ⚡ — 1-5 дақиқа • 100% беҳтар"
     )
 
 
