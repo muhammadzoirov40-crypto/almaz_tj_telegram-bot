@@ -34,6 +34,11 @@ def get_main_menu_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
         ],
         [
             InlineKeyboardButton(
+                text="💳 Шарҷи баланс", callback_data="balance:topup"
+            ),
+        ],
+        [
+            InlineKeyboardButton(
                 text=CHANNEL_TEXT, url="https://t.me/_ff_almaz_tj_"
             ),
         ],
