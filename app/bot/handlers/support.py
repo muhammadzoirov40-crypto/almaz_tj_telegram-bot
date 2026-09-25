@@ -26,7 +26,7 @@ async def support_start(message: Message, state: FSMContext) -> None:
     await message.answer(
         "📞 <b>Дастгирӣ — DANAT.TJ</b>\n\n"
         "Мавзӯи муроҷиататонро нависед (масалан: Пардохт, Донат, Дигар).\n"
-        "Ё ба Muhammad нависед: <a href=\"tel:+992002119831\">+992 002119831</a>"
+        "Ё ба Muhammad нависед: <a href=\"https://t.me/Muhammad_beckend\">@Muhammad_beckend</a>"
     )
 
 
@@ -37,7 +37,7 @@ async def support_start_callback(call: CallbackQuery, state: FSMContext) -> None
     await safe_edit_text(call.message, 
         "📞 <b>Дастгирӣ — DANAT.TJ</b>\n\n"
         "Мавзӯи муроҷиататонро нависед (масалан: Пардохт, Донат, Дигар).\n"
-        "Ё ба Muhammad нависед: <a href=\"tel:+992002119831\">+992 002119831</a>"
+        "Ё ба Muhammad нависед: <a href=\"https://t.me/Muhammad_beckend\">@Muhammad_beckend</a>"
     )
     await safe_answer(call)
 
