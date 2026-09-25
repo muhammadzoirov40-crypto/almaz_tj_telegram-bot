@@ -502,8 +502,6 @@ async def _send_topup_to_admin(
     if request.phone:
         lines.append(f"📱 Телефон: <code>{request.phone}</code>")
     lines.append(f"👤 Клиент: {user_label}")
-    if request.reference_id:
-        lines.append(f"🆔 Ref: <code>{request.reference_id}</code>")
     if receipt_text:
         lines.extend(["", f"✉️ Чек:\n{receipt_text[:400]}"])
     lines.extend(["", "Қабул ё рад кунед:"])
