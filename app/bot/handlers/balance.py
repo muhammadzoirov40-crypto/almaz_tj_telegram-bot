@@ -476,8 +476,7 @@ async def on_balance_confirm(
         + "\n"
         "Рақами пардохт: "
         f"<code>{_payment_number_for(method)}</code>\n\n"
-        "Лутфан <b>расми чек</b> ё <b>матни чек</b> фиристед.\n"
-        "Идора чекро санҷида, ба баланс илова мекунад."
+        "Лутфан <b>расми чек</b> ё <b>матни чек</b> фиристед."
     )
     card = _card_photo_path(method)
     if card:
