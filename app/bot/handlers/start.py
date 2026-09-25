@@ -18,8 +18,6 @@ START_TEXT = (
     "Free Fire • PUBG • Stars\n"
     "ва дигар бозиҳо\n"
     "1-5 дақиқа • 100% беҳтар\n\n"
-    "📢 Канал: <a href=\"https://t.me/_ff_almaz_tj_\">@_ff_almaz_tj_</a>\n"
-    "👤 Muhammad: <a href=\"tel:+992002119831\">+992 002119831</a>\n\n"
     "Лутфан аз менюи зерин интихоб кунед:"
 )
 
