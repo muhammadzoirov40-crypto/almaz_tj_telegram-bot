@@ -45,6 +45,15 @@ PAYMENT_METHODS = {
 
 CARDS_DIR = Path(__file__).resolve().parents[3] / "assets" / "cards"
 
+# Dushanbe City card details (printed on the back of the card)
+DS_CARD_INFO = [
+    "🏦 <b>ЧСП «Душанбе Сити Банк»</b>",
+    "📍 ш. Душанбе, кӯчаи Соҳилӣ, 5",
+    "🌐 www.dc.tj • info@dc.tj • +992 (44) 630 9999",
+    "🔑 Рақами силсилавӣ: <code>027 215 609</code>",
+    "📱 DC Next-ро насб кунед (www.citycard.tj)",
+]
+
 
 def _card_photo_path(method: str) -> Path | None:
     stems = ["ds"] if method == BalanceTopUpMethod.DS else ["alif", "ds"]
@@ -245,6 +254,8 @@ def _instructions_text(
             "4️⃣ Чекро фиристед → админ санҷида, баланс илова мекунад",
         ]
     )
+    if method == BalanceTopUpMethod.DS:
+        lines.extend(["", *DS_CARD_INFO])
     return "\n".join(lines)
 
 
