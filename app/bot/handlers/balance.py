@@ -320,8 +320,7 @@ async def on_payment_method(call: CallbackQuery, state: FSMContext) -> None:
         phone_request = (
             "🏙 <b>Dushanbe City</b>\n\n"
             "📱 Тугмаи зеринро зер кунед ва <b>рақами худатон</b>-ро "
-            "фиристед (Telegram рақами шуморо мефиристад).\n\n"
-            "Ё рақамро бо даст нависед: <code>+992002119831</code>"
+            "фиристед (Telegram рақами шуморо мефиристад)."
         )
         photo = _card_photo_path(method.value)
         if photo:
