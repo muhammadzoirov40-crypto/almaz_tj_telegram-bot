@@ -47,11 +47,12 @@ CARDS_DIR = Path(__file__).resolve().parents[3] / "assets" / "cards"
 
 
 def _card_photo_path(method: str) -> Path | None:
-    stem = "ds" if method == BalanceTopUpMethod.DS else "alif"
-    for ext in (".jpg", ".jpeg", ".png", ".webp"):
-        path = CARDS_DIR / f"{stem}{ext}"
-        if path.is_file():
-            return path
+    stems = ["ds"] if method == BalanceTopUpMethod.DS else ["alif", "ds"]
+    for stem in stems:
+        for ext in (".jpg", ".jpeg", ".png", ".webp"):
+            path = CARDS_DIR / f"{stem}{ext}"
+            if path.is_file():
+                return path
     return None
 
 
