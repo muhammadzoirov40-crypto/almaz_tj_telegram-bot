@@ -486,7 +486,6 @@ async def _send_topup_to_admin(
     lines = [
         "📩 <b>Чеки шарҷи баланс</b>",
         "",
-        f"📦 Дархост: №{request.id}",
         f"💰 Маблағ: <b>{request.amount} {request.currency}</b>",
         f"💳 Усул: {method_label}",
     ]
