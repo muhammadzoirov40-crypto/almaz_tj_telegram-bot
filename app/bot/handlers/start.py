@@ -18,8 +18,9 @@ START_TEXT = (
     "Free Fire • PUBG • Stars\n"
     "ва дигар бозиҳо\n"
     "1-5 дақиқа • 100% беҳтар\n\n"
-    "Лутфан аз менюи зерин интихоб кунед:"
 )
+
+START_FOOTER = "Лутфан аз менюи зерин интихоб кунед:"
 
 
 def _user_block(user) -> str:
@@ -48,7 +49,7 @@ async def cmd_start(
         logger.info("User created via /start telegram_id=%s", message.from_user.id)
 
     await message.answer(
-        _user_block(user) + START_TEXT,
+        START_TEXT + _user_block(user) + START_FOOTER,
         reply_markup=get_main_menu_keyboard(is_admin=user.is_admin),
     )
 
@@ -59,7 +60,7 @@ async def cmd_menu(message: Message, db_user=None) -> None:
     is_admin = db_user.is_admin if db_user else False
     text = "🏠 <b>Менюи DANAT.TJ</b>\n\n"
     if db_user:
-        text = _user_block(db_user) + text
+        text = text + _user_block(db_user)
     await message.answer(
         text,
         reply_markup=get_main_menu_keyboard(is_admin=is_admin),
