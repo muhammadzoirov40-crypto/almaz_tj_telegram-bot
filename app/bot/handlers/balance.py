@@ -1,13 +1,12 @@
 ﻿from __future__ import annotations
 
 from decimal import Decimal
-from pathlib import Path
 from uuid import uuid4
 
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, FSInputFile, Message
+from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.keyboards import (
@@ -43,25 +42,9 @@ PAYMENT_METHODS = {
     BalanceTopUpMethod.ALIF: "💳 Alif",
 }
 
-CARDS_DIR = Path(__file__).resolve().parents[3] / "assets" / "cards"
-
-
-def _card_photo_path(method: str) -> Path | None:
-    stems = ["ds"] if method == BalanceTopUpMethod.DS else ["alif", "ds"]
-    for stem in stems:
-        for ext in (".jpg", ".jpeg", ".png", ".webp"):
-            path = CARDS_DIR / f"{stem}{ext}"
-            if path.is_file():
-                return path
-    return None
-
 
 def _balance_text(user: User) -> str:
-    return (
-        f"💰 <b>Баланс:</b> {user.balance} TJS\n\n"
-        "Барои афзоиш «💳 Шарҷ кунед»-ро зер кунед.\n"
-        "DANAT.TJ ⚡ — 1-5 дақиқа • 100% беҳтар"
-    )
+    return f"💰 <b>Баланс:</b> {user.balance} TJS"
 
 
 async def _get_or_none_user(session, telegram_id: int) -> User | None:
@@ -258,34 +241,18 @@ async def _show_payment_instructions(
     amount: Decimal,
     method: str,
 ) -> None:
-    method_label = PAYMENT_METHODS.get(method, method)
     text = _instructions_text(amount, method)
 
     await state.update_data(method=method, amount=str(amount))
     await state.set_state(BalanceTopUpStates.confirming)
 
-    photo = _card_photo_path(method)
-    if photo:
-        await safe_edit_text(
-            call.message,
-            f"💳 <b>Усул: {method_label}</b>\n\n👇 Расми картаро нигаред:",
-            reply_markup=None,
-        )
-        await call.message.answer_photo(
-            FSInputFile(photo),
-            caption=text,
-            reply_markup=get_balance_confirm_keyboard(
-                url=_payment_url_for(method, amount)
-            ),
-        )
-    else:
-        await safe_edit_text(
-            call.message,
-            text,
-            reply_markup=get_balance_confirm_keyboard(
-                url=_payment_url_for(method, amount)
-            ),
-        )
+    await safe_edit_text(
+        call.message,
+        text,
+        reply_markup=get_balance_confirm_keyboard(
+            url=_payment_url_for(method, amount)
+        ),
+    )
 
 
 @router.callback_query(F.data.startswith("paymethod:"))
@@ -322,31 +289,12 @@ async def on_payment_method(call: CallbackQuery, state: FSMContext) -> None:
             "📱 Тугмаи зеринро зер кунед ва <b>рақами худатон</b>-ро "
             "фиристед (Telegram рақами шуморо мефиристад)."
         )
-        photo = _card_photo_path(method.value)
-        if photo:
-            # Card photo first, then a fresh message carries the reply keyboard
-            # (Telegram only shows the reply keyboard on the latest message).
-            await safe_edit_text(
-                call.message,
-                "🏙 <b>Усул: Dushanbe City</b>\n\n👇 Расми картаро нигаред:",
-                reply_markup=None,
-            )
-            await call.message.answer_photo(
-                FSInputFile(photo),
-                caption=phone_request,
-                reply_markup=None,
-            )
-            await call.message.answer(
-                "👇 Тугмаи зеринро зер кунед:",
-                reply_markup=get_share_phone_keyboard(),
-            )
-        else:
-            # Inline buttons are removed; reply keyboard asks for the user's own number
-            await safe_edit_text(call.message, phone_request, reply_markup=None)
-            await call.message.answer(
-                "Рақами худатонро интихоб кунед:",
-                reply_markup=get_share_phone_keyboard(),
-            )
+        # Inline buttons are removed; reply keyboard asks for the user's own number
+        await safe_edit_text(call.message, phone_request, reply_markup=None)
+        await call.message.answer(
+            "Рақами худатонро интихоб кунед:",
+            reply_markup=get_share_phone_keyboard(),
+        )
         await safe_answer(call)
         return
 
