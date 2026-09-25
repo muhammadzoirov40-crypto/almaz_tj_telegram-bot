@@ -34,7 +34,7 @@ def get_main_menu_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
         ],
         [
             InlineKeyboardButton(
-                text="💳 Шарҷи баланс", callback_data="balance:topup"
+                text="💳 Пур кардани баланс", callback_data="balance:topup"
             ),
         ],
         [
