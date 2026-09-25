@@ -69,6 +69,11 @@ class Settings(BaseSettings):
     payment_ds_phone: str = Field(
         default=DEFAULT_PAYMENT_NUMBER, alias="PAYMENT_DS_PHONE"
     )
+    # Dushanbe City card number + optional "open payment" link (inline URL button)
+    payment_ds_card_number: str = Field(
+        default="", alias="PAYMENT_DS_CARD_NUMBER"
+    )
+    payment_ds_url: str = Field(default="", alias="PAYMENT_DS_URL")
 
     # Providers: "mock" (MVP/dev) or "real" (production)
     payment_provider: str = Field(default="mock", alias="PAYMENT_PROVIDER")

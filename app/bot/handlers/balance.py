@@ -185,8 +185,18 @@ def _payment_number_for(method: str) -> str:
     if method == BalanceTopUpMethod.ALIF:
         raw = settings.payment_alif_number or settings.payment_card_number
     else:
-        raw = settings.payment_ds_phone or settings.payment_card_number
+        raw = (
+            settings.payment_ds_card_number
+            or settings.payment_ds_phone
+            or settings.payment_card_number
+        )
     return _format_payment_number(raw) or DEFAULT_PAYMENT_NUMBER
+
+
+def _payment_url_for(method: str) -> str | None:
+    if method == BalanceTopUpMethod.DS:
+        return settings.payment_ds_url or None
+    return None
 
 
 def _payment_holder_for(method: str) -> str:
@@ -253,13 +263,17 @@ async def _show_payment_instructions(
         await call.message.answer_photo(
             FSInputFile(photo),
             caption=text,
-            reply_markup=get_balance_confirm_keyboard(),
+            reply_markup=get_balance_confirm_keyboard(
+                url=_payment_url_for(method)
+            ),
         )
     else:
         await safe_edit_text(
             call.message,
             text,
-            reply_markup=get_balance_confirm_keyboard(),
+            reply_markup=get_balance_confirm_keyboard(
+                url=_payment_url_for(method)
+            ),
         )
 
 
@@ -349,7 +363,9 @@ async def _finish_phone(
 
     await message.answer(
         text,
-        reply_markup=get_balance_confirm_keyboard(),
+        reply_markup=get_balance_confirm_keyboard(
+            url=_payment_url_for(BalanceTopUpMethod.DS.value)
+        ),
     )
 
 

@@ -103,19 +103,23 @@ def get_balance_cancel_keyboard() -> InlineKeyboardMarkup:
     )
 
 
-def get_balance_confirm_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="✅ Тасдиқи пардохт", callback_data="balance:confirm"
-                ),
-                InlineKeyboardButton(
-                    text="❌ Бекор", callback_data="balance:cancel"
-                ),
-            ]
+def get_balance_confirm_keyboard(url: str | None = None) -> InlineKeyboardMarkup:
+    rows = [
+        [
+            InlineKeyboardButton(
+                text="✅ Тасдиқи пардохт", callback_data="balance:confirm"
+            ),
+            InlineKeyboardButton(
+                text="❌ Бекор", callback_data="balance:cancel"
+            ),
         ]
-    )
+    ]
+    if url:
+        rows.insert(
+            0,
+            [InlineKeyboardButton(text="🔗 Гузариш ба пардохт", url=url)],
+        )
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def get_balance_receipt_keyboard() -> InlineKeyboardMarkup:
