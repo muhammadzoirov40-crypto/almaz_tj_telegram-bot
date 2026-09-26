@@ -95,6 +95,26 @@ def get_admin_back_keyboard() -> InlineKeyboardMarkup:
     )
 
 
+def get_balance_topup_approved_keyboard(
+    request_id: int,
+) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="↩️ Баргардонидан",
+                    callback_data=f"admin:bal:refund:{request_id}",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 Бозгашт", callback_data="admin:menu"
+                )
+            ],
+        ]
+    )
+
+
 def get_product_actions_keyboard(product_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[

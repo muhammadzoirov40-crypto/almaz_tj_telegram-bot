@@ -107,6 +107,19 @@ class BalanceTopUpRepository:
         await self.session.flush()
         return request
 
+    async def mark_refunded(
+        self, request_id: int, reason: str = ""
+    ) -> Optional[BalanceTopUpRequest]:
+        request = await self.get_by_id(request_id)
+        if request is None:
+            return None
+        request.status = BalanceTopUpStatus.REFUNDED
+        if reason:
+            request.failure_reason = reason
+        request.processed_at = datetime.now(timezone.utc)
+        await self.session.flush()
+        return request
+
     async def list_pending(self, limit: int = 10) -> list[BalanceTopUpRequest]:
         stmt = (
             select(BalanceTopUpRequest)

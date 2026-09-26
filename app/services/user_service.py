@@ -62,3 +62,33 @@ class UserService:
         )
         logger.info("Balance credited user_id=%s amount=%s", user_id, amount)
         return user
+
+    async def remove_balance(
+        self,
+        user_id: int,
+        amount: Decimal,
+        description: str = "",
+        reference_id: Optional[str] = None,
+    ) -> User:
+        if amount <= 0:
+            raise ValueError("Маблағ бояд мусбӣ бошад.")
+        user = await self.users.get_by_id(user_id)
+        if user is None:
+            raise ValueError("Корбар ёфт нашуд.")
+        if user.balance < amount:
+            raise ValueError(
+                "Баланс кофӣ нест: "
+                f"{user.balance} TJS < {amount} TJS"
+            )
+        user = await self.users.update_balance(
+            user_id, user.balance - amount
+        )
+        await self.transactions.create(
+            user_id=user_id,
+            type_=TransactionType.REFUND,
+            amount=amount,
+            description=description or "Balance refund",
+            reference_id=reference_id,
+        )
+        logger.info("Balance debited user_id=%s amount=%s", user_id, amount)
+        return user

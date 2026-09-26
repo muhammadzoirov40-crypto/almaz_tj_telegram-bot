@@ -98,7 +98,7 @@ async def on_balance_topup(call: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(BalanceTopUpStates.waiting_amount)
     await safe_edit_text(
         call.message,
-        "💳 <b>Шарҷи баланс</b>\n\n"
+        "💳 <b>Пардохти баланс</b>\n\n"
         "Маблағро интихоб кунед ё рақам нависед (TJS):",
         reply_markup=get_topup_amount_keyboard(),
     )
@@ -272,7 +272,7 @@ async def on_payment_method(call: CallbackQuery, state: FSMContext) -> None:
         await state.set_state(BalanceTopUpStates.waiting_amount)
         await safe_edit_text(
             call.message,
-            "💳 <b>Шарҷи баланс</b>\n\n"
+            "💳 <b>Пардохти баланс</b>\n\n"
             "Маблағро интихоб кунед ё рақам нависед (TJS):",
             reply_markup=get_topup_amount_keyboard(),
         )
@@ -372,7 +372,7 @@ async def process_phone(message: Message, state: FSMContext) -> None:
     if text == CANCEL_TOPUP_TEXT:
         await state.clear()
         await message.answer(
-            "🚫 Шарҷ бекор карда шуд.",
+            "🚫 Пардохт бекор карда шуд.",
             reply_markup=get_main_menu_keyboard(),
         )
         return
@@ -469,6 +469,13 @@ async def on_balance_confirm(
     await safe_answer(call, "Чекро фиристед")
 
 
+def _user_display_name(user: User | None) -> str:
+    if user is None:
+        return "—"
+    parts = [p for p in (user.first_name, user.username) if p]
+    return " ".join(parts) or "—"
+
+
 async def _send_topup_to_admin(
     session: AsyncSession,
     request_id: int,
@@ -484,10 +491,14 @@ async def _send_topup_to_admin(
     method_label = PAYMENT_METHODS.get(request.method, request.method)
 
     lines = [
-        "📩 <b>Чеки шарҷи баланс</b>",
+        "📩 <b>Чеки пардохти баланс</b>",
         "",
         f"💰 Маблағ: <b>{request.amount} {request.currency}</b>",
         f"💳 Усул: {method_label}",
+        f"👤 Ном: {_user_display_name(db_user)}",
+        f"📱 Телефон: {request.phone or '—'}",
+        f"🆔 ID: {db_user.telegram_id if db_user else '—'}",
+        f"📦 Дархост: №{request.id}",
     ]
     if receipt_text:
         lines.extend(["", f"✉️ Чек:\n{receipt_text[:400]}"])
@@ -538,7 +549,7 @@ async def on_balance_receipt_photo(
     await message.answer(
         "✅ <b>Чек қабул шуд</b>\n\n"
         f"📦 Дархост: №{request_id}\n\n"
-        "Идора чекро санҷида, ба баланс илова мекунад.\n"
+        "Админ чекро санҷида, ба баланс илова мекунад.\n"
         "Дар бораи қабул/рад ба шумо хабар дода мешавад.",
         reply_markup=get_main_menu_keyboard(),
     )
@@ -577,7 +588,7 @@ async def on_balance_receipt_text(
     await message.answer(
         "✅ <b>Чек қабул шуд</b>\n\n"
         f"📦 Дархост: №{request_id}\n\n"
-        "Идора чекро санҷида, ба баланс илова мекунад.",
+        "Админ чекро санҷида, ба баланс илова мекунад.",
         reply_markup=get_main_menu_keyboard(),
     )
 
@@ -599,7 +610,7 @@ async def on_balance_cancel(
     await state.clear()
     await safe_edit_text(
         call.message,
-        "🚫 Шарҷ бекор карда шуд.",
+        "🚫 Пардохт бекор карда шуд.",
         reply_markup=get_main_menu_keyboard(),
     )
     await safe_answer(call)
@@ -625,7 +636,7 @@ async def _cancel_balance_topup_message(
             await repo.mark_cancelled(request_id)
     await state.clear()
     await message.answer(
-        "🚫 Шарҷ бекор карда шуд.",
+        "🚫 Пардохт бекор карда шуд.",
         reply_markup=get_main_menu_keyboard(),
     )
     if request_id:

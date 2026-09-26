@@ -45,7 +45,7 @@ def get_balance_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
     ]
     if is_admin:
         rows.append(
-            [InlineKeyboardButton(text="🛠 Идора", callback_data="admin:menu")]
+            [InlineKeyboardButton(text="🛠 Админ", callback_data="admin:menu")]
         )
     return InlineKeyboardMarkup(inline_keyboard=rows)
 

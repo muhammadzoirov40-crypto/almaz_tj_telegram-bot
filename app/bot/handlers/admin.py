@@ -13,6 +13,7 @@ from app.bot.keyboards import (
     format_product_button,
     get_admin_back_keyboard,
     get_admin_menu_keyboard,
+    get_balance_topup_approved_keyboard,
     get_balance_topup_review_keyboard,
     get_block_menu_keyboard,
     get_order_review_keyboard,
@@ -42,7 +43,27 @@ router = Router(name="admin")
 router.message.filter(AdminFilter())
 router.callback_query.filter(AdminFilter())
 
-ADMIN_TEXT = "🛠 Идора"
+ADMIN_TEXT = "🛠 Админ"
+
+
+def _review_keyboard(order_id: int | None = None):
+    from aiogram.types import (
+        InlineKeyboardButton,
+        InlineKeyboardMarkup,
+    )
+
+    if order_id is None:
+        return None
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="⭐ Баҳо гузоред",
+                    callback_data=f"review:send:{order_id}",
+                )
+            ]
+        ]
+    )
 
 ORDER_ICONS: dict[str, str] = {
     OrderStatus.PENDING: "⏳",
@@ -92,7 +113,7 @@ def _order_detail(order: Order) -> str:
 @router.message(F.text == ADMIN_TEXT)
 async def admin_menu(message: Message) -> None:
     await message.answer(
-        "🛠 <b>Панели идора</b>",
+        "🛠 <b>Панели админ</b>",
         reply_markup=get_admin_menu_keyboard(),
     )
 
@@ -100,7 +121,7 @@ async def admin_menu(message: Message) -> None:
 @router.callback_query(F.data == "admin:menu")
 async def admin_menu_callback(call: CallbackQuery) -> None:
     await safe_edit_text(call.message, 
-        "🛠 <b>Панели идора</b>",
+        "🛠 <b>Панели админ</b>",
         reply_markup=get_admin_menu_keyboard(),
     )
     await safe_answer(call)
@@ -228,7 +249,7 @@ async def admin_balance_topup_accept(call: CallbackQuery, session=None) -> None:
     await safe_edit_text(
         call.message,
         f"✅ <b>Шарҷ қабул шуд</b>\n\n{detail}",
-        reply_markup=get_admin_back_keyboard(),
+        reply_markup=get_balance_topup_approved_keyboard(request.id),
     )
 
     if request.user is not None:
@@ -301,7 +322,7 @@ async def admin_balance_topup_reject(call: CallbackQuery, session=None) -> None:
             f"❌ <b>Шарҷ рад шуд</b>\n\n"
             f"📦 Дархост: №{request.id}\n"
             f"💰 {request.amount} {request.currency}\n\n"
-            "Идора чекро рад кард.\n"
+            "Админ чекро рад кард.\n"
             "Барои тафсилот ба дастгирӣ муроҷиат кунед.",
         )
 
@@ -311,6 +332,80 @@ async def admin_balance_topup_reject(call: CallbackQuery, session=None) -> None:
         call.from_user.id,
     )
     await safe_answer(call, "Рад шуд")
+
+
+@router.callback_query(F.data.startswith("admin:bal:refund:"))
+async def admin_balance_topup_refund(call: CallbackQuery, session=None) -> None:
+    parts = _parse_parts(call.data or "")
+    if len(parts) != 4:
+        await safe_answer(call, "Нодуруст.", show_alert=True)
+        return
+    try:
+        request_id = int(parts[3])
+    except ValueError:
+        await safe_answer(call, "Нодуруст.", show_alert=True)
+        return
+
+    repo = BalanceTopUpRepository(session)
+    request = await repo.get_by_id(request_id)
+    if request is None:
+        await safe_answer(call, "Дархост ёфт нашуд.", show_alert=True)
+        return
+    if request.status != BalanceTopUpStatus.APPROVED:
+        await safe_answer(
+            call,
+            f"Фақат қабул шудаҳо баргардонида мешавад. Ҳолат: {request.status}",
+            show_alert=True,
+        )
+        return
+
+    user_service = UserService(session)
+    try:
+        user = await user_service.remove_balance(
+            user_id=request.user_id,
+            amount=Decimal(request.amount),
+            description=f"Balance refund for top-up #{request.id}",
+            reference_id=request.reference_id or f"bal:refund:{request.id}",
+        )
+    except ValueError as exc:
+        await safe_answer(call, str(exc), show_alert=True)
+        return
+    except Exception:
+        logger.exception("Balance refund failed request_id=%s", request_id)
+        await safe_answer(call, "Хатогӣ.", show_alert=True)
+        return
+
+    await repo.mark_refunded(request_id, reason="Refunded by admin")
+    request = await repo.get_by_id(request_id)
+
+    method_label = "🏙 Dushanbe City" if request.method == "ds" else "💳 Alif"
+    await safe_edit_text(
+        call.message,
+        f"↩️ <b>Шарҷ баргардонида шуд</b>\n\n"
+        f"📦 №{request.id}\n"
+        f"💰 {request.amount} {request.currency}\n"
+        f"💳 {method_label}\n"
+        f"💳 Баланс: {user.balance} TJS",
+        reply_markup=get_admin_back_keyboard(),
+    )
+
+    if request.user is not None:
+        await notification_service.safe_send(
+            request.user.telegram_id,
+            f"↩️ <b>Шарҷ баргардонида шуд</b>\n\n"
+            f"📦 Дархост: №{request.id}\n"
+            f"💰 Аз ҳисоб худ карда шуд: {request.amount} "
+            f"{request.currency}\n"
+            f"💳 Баланс: <b>{user.balance} TJS</b>\n\n"
+            "Админ шарҷро баргардонид.",
+        )
+
+    logger.info(
+        "Admin refunded balance topup request_id=%s by=%s",
+        request_id,
+        call.from_user.id,
+    )
+    await safe_answer(call, "Баргардонида шуд!")
 
 
 @router.callback_query(F.data.startswith("admin:order:accept:"))
@@ -374,6 +469,7 @@ async def admin_order_accept(call: CallbackQuery, session=None) -> None:
             f"🎮 {product_name}\n"
             f"🆔 UID: <code>{order.free_fire_uid}</code>\n"
             f"Ҳолат: {ORDER_STATUS_LABELS.get(order.status, order.status)}",
+            reply_markup=_review_keyboard(order.id),
         )
 
     logger.info("Admin accepted order_id=%s by=%s", order_id, call.from_user.id)
@@ -448,7 +544,7 @@ async def admin_order_reject(call: CallbackQuery, session=None) -> None:
             f"📦 №{order.id}\n"
             f"🎮 {product_name}\n"
             f"🆔 UID: <code>{order.free_fire_uid}</code>\n\n"
-            f"Идора чекро рад кард.{detail}\n"
+            f"Админ чекро рад кард.{detail}\n"
             "Барои тафсилот ба дастгирӣ муроҷиат кунед.",
         )
 
@@ -676,7 +772,7 @@ async def admin_block_process(message: Message, state, session) -> None:
 
     telegram_id = int(text)
     if settings.is_admin_id(telegram_id):
-        await message.answer("❌ Идораро блок кардан мумкин нест.")
+        await message.answer("❌ Админро блок кардан мумкин нест.")
         await state.clear()
         return
 

@@ -580,14 +580,14 @@ class RealTopUpProvider(TopUpProvider):
                 success=True,
                 pending=status == "processing",
                 provider_reference=remote_ref,
-                message="FireLoot: заказ қабул шуд.",
+                message="FireLoot: Фармоиш қабул шуд.",
                 raw=data,
             )
         if status in {"failed", "refunded"}:
             return TopUpResult(
                 success=False,
                 provider_reference=remote_ref,
-                message="FireLoot: заказ иҷро нашуд.",
+                message="FireLoot: Фармоиш иҷро нашуд.",
                 raw=data,
             )
         return TopUpResult(

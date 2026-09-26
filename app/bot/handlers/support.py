@@ -26,7 +26,8 @@ async def support_start(message: Message, state: FSMContext) -> None:
     await message.answer(
         "📞 <b>Дастгирӣ — DANAT.TJ</b>\n\n"
         "Мавзӯи муроҷиататонро нависед (масалан: Пардохт, Донат, Дигар).\n"
-        "Ё ба админ нависед: <a href=\"https://t.me/Muhammad_beckend\">@Muhammad_beckend</a>"
+        "Ё ба админ нависед: <a href=\"https://t.me/Muhammad_beckend\">@Muhammad_beckend</a>",
+        reply_markup=get_main_menu_keyboard(),
     )
 
 
@@ -37,7 +38,8 @@ async def support_start_callback(call: CallbackQuery, state: FSMContext) -> None
     await safe_edit_text(call.message, 
         "📞 <b>Дастгирӣ — DANAT.TJ</b>\n\n"
         "Мавзӯи муроҷиататонро нависед (масалан: Пардохт, Донат, Дигар).\n"
-        "Ё ба админ нависед: <a href=\"https://t.me/Muhammad_beckend\">@Muhammad_beckend</a>"
+        "Ё ба админ нависед: <a href=\"https://t.me/Muhammad_beckend\">@Muhammad_beckend</a>",
+        reply_markup=get_main_menu_keyboard(),
     )
     await safe_answer(call)
 

@@ -4,5 +4,12 @@ __pycache__/
 venv/
 .env
 *.log
+*.out
 .pytest_cache/
 .mypy_cache/
+
+# stray files
+nohup.out
+python3 main.py
+app/config.py
+app/bot/handlers/название_файла.py

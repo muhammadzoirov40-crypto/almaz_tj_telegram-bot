@@ -6,6 +6,7 @@ class BalanceTopUpStatus(StrEnum):
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
     CANCELLED = "CANCELLED"
+    REFUNDED = "REFUNDED"
 
 
 class BalanceTopUpMethod(StrEnum):

@@ -1,6 +1,7 @@
 from app.bot.keyboards.admin import (
     get_admin_back_keyboard,
     get_admin_menu_keyboard,
+    get_balance_topup_approved_keyboard,
     get_block_menu_keyboard,
     get_order_review_keyboard,
     get_pending_orders_keyboard,
@@ -61,4 +62,5 @@ __all__ = [
     "get_product_actions_keyboard",
     "get_order_review_keyboard",
     "get_pending_orders_keyboard",
+    "get_balance_topup_approved_keyboard",
 ]

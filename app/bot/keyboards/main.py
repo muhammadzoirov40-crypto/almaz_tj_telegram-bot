@@ -14,7 +14,7 @@ BALANCE_TEXT = "💰 Баланс"
 PROMO_TEXT = "🎁 Пешниҳодҳо"
 SUPPORT_TEXT = "📞 Дастгирӣ ба админ"
 TOPUP_TEXT = "💎 Донат"
-ADMIN_TEXT = "🛠 Идора"
+ADMIN_TEXT = "🛠 Админ"
 CHANNEL_TEXT = "📢 Канал"
 
 
@@ -28,9 +28,11 @@ def get_main_menu_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text=BALANCE_TEXT, callback_data="menu:balance"),
         ],
         [InlineKeyboardButton(text=PROMO_TEXT, callback_data="menu:promo")],
+        [InlineKeyboardButton(text=PROFILE_TEXT, callback_data="menu:profile")],
         [
-            InlineKeyboardButton(text=ORDERS_TEXT, callback_data="menu:orders"),
-            InlineKeyboardButton(text=PROFILE_TEXT, callback_data="menu:profile"),
+            InlineKeyboardButton(
+                text="🏆 Харидорҳо", callback_data="menu:buyers"
+            )
         ],
         [InlineKeyboardButton(text=SUPPORT_TEXT, callback_data="menu:support")],
     ]
@@ -56,5 +58,5 @@ async def get_bot_commands(is_admin: bool = False) -> list[BotCommand]:
         BotCommand(command="support", description="Дастгирӣ"),
     ]
     if is_admin:
-        commands.append(BotCommand(command="admin", description="Идора"))
+        commands.append(BotCommand(command="admin", description="Админ"))
     return commands

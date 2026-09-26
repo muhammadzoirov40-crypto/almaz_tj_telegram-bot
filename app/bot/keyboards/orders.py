@@ -11,7 +11,7 @@ def get_orders_keyboard() -> InlineKeyboardMarkup:
                     text="🔄 Навсозӣ", callback_data="orders:refresh"
                 ),
                 InlineKeyboardButton(
-                    text="🔙 Менюи асосӣ", callback_data="back:menu"
+                    text="🔙 Назад", callback_data="menu:profile"
                 ),
             ]
         ]

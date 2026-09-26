@@ -569,7 +569,7 @@ async def on_order_pay(
         f"🎮 {product_name}\n"
         f"🆔 UID: <code>{uid}</code>\n"
         f"💳 Ҳисоб: {new_balance} {currency}\n\n"
-        "⏳ Интизори қабули идора шавед.\n"
+        "⏳ Интизори қабули админ шавед.\n"
         "Дар бораи қабул/рад ба шумо хабар дода мешавад."
     )
     await safe_edit_text(
