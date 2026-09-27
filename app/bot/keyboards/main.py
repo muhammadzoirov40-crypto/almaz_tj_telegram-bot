@@ -11,12 +11,12 @@ from app.config import settings
 
 MAIN_MENU_TEXT = "🏠 Асосӣ"
 ORDERS_TEXT = "📦 Фармоишҳои ман"
-PROFILE_TEXT = "👤 Саҳифаи ман"
-BALANCE_TEXT = "💰 Баланс"
-PROMO_TEXT = "🎁 Пешниҳодҳо"
-SUPPORT_TEXT = "📞 Дастгирӣ ба админ"
-TOPUP_TEXT = "💎 Донат"
-ADMIN_TEXT = "🛠 Админ"
+PROFILE_TEXT = "🔴 👤 Саҳифаи ман"
+BALANCE_TEXT = "🔴 💰 Баланс"
+PROMO_TEXT = "🔴 🎁 Пешниҳодҳо"
+SUPPORT_TEXT = "🔴 📞 Дастгирӣ ба админ"
+TOPUP_TEXT = "🔴 💎 Донат"
+ADMIN_TEXT = "🔴 🛠 Админ"
 CHANNEL_TEXT = "📢 Канал"
 
 SUBSCRIBE_CALLBACK = "sub:check"
@@ -54,7 +54,7 @@ def get_main_menu_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text=TOPUP_TEXT, callback_data="menu:topup")],
         [
             InlineKeyboardButton(
-                text="💳 Пур кардани баланс", callback_data="balance:topup"
+                text="🔴 💳 Пур кардани баланс", callback_data="balance:topup"
             ),
             InlineKeyboardButton(text=BALANCE_TEXT, callback_data="menu:balance"),
         ],
@@ -62,7 +62,7 @@ def get_main_menu_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text=PROFILE_TEXT, callback_data="menu:profile")],
         [
             InlineKeyboardButton(
-                text="🏆 Харидорҳо", callback_data="menu:buyers"
+                text="🔴 🏆 Харидорҳо", callback_data="menu:buyers"
             )
         ],
         [InlineKeyboardButton(text=SUPPORT_TEXT, callback_data="menu:support")],

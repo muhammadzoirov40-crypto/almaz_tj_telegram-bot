@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.bot.filters import AdminFilter
 from app.bot.keyboards import (
+    ADMIN_TEXT,
     format_product_button,
     get_admin_back_keyboard,
     get_admin_menu_keyboard,
@@ -43,8 +44,6 @@ logger = get_logger(__name__)
 router = Router(name="admin")
 router.message.filter(AdminFilter())
 router.callback_query.filter(AdminFilter())
-
-ADMIN_TEXT = "🛠 Админ"
 
 
 def _user_mention(user: User | None) -> str:

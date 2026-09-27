@@ -8,6 +8,7 @@ from app.bot.keyboards.admin import (
     get_product_actions_keyboard,
 )
 from app.bot.keyboards.main import (
+    ADMIN_TEXT,
     SUBSCRIBE_CALLBACK,
     get_main_menu_keyboard,
     get_remove_keyboard,
@@ -43,6 +44,7 @@ __all__ = [
     "get_remove_keyboard",
     "get_subscribe_keyboard",
     "SUBSCRIBE_CALLBACK",
+    "ADMIN_TEXT",
     "get_products_keyboard",
     "format_product_button",
     "get_ff_category_keyboard",
