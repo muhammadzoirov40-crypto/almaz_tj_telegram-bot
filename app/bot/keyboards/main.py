@@ -23,6 +23,9 @@ SUBSCRIBE_CALLBACK = "sub:check"
 
 
 def _channel_join_url() -> str:
+    invite = (settings.required_channel_invite_url or "").strip()
+    if invite:
+        return invite
     username = (settings.required_channel_username or "").strip().lstrip("@")
     if not username:
         return "https://t.me/"

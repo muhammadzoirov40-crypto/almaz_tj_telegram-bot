@@ -68,6 +68,15 @@ def test_join_url_uses_username() -> None:
     assert _channel_join_url().startswith("https://t.me/")
 
 
+def test_join_url_prefers_invite_link(monkeypatch) -> None:
+    from app.config import settings
+
+    monkeypatch.setattr(
+        settings, "required_channel_invite_url", "https://t.me/+abcDEF"
+    )
+    assert _channel_join_url() == "https://t.me/+abcDEF"
+
+
 def test_subscribe_keyboard_has_two_buttons() -> None:
     keyboard = get_subscribe_keyboard()
     rows = keyboard.inline_keyboard

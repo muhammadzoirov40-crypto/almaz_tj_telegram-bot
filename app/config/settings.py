@@ -92,6 +92,10 @@ class Settings(BaseSettings):
     required_channel_username: str = Field(
         default="@_ff_almaz_tj_", alias="REQUIRED_CHANNEL_USERNAME"
     )
+    # Invite link for private channels (no @username); shown as the join button.
+    required_channel_invite_url: str = Field(
+        default="", alias="REQUIRED_CHANNEL_INVITE_URL"
+    )
 
     # Providers: "mock" (MVP/dev) or "real" (production)
     payment_provider: str = Field(default="mock", alias="PAYMENT_PROVIDER")
