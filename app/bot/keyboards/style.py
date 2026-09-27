@@ -27,15 +27,15 @@ STYLE_DANGER = "danger"  # red — destructive actions
 _DANGER_TOKENS = frozenset(
     {"cancel", "reject", "no", "delete", "block", "unblock", "stop"}
 )
-_PRIMARY_TOKENS = frozenset({"back", "edit", "page", "next", "prev", "set"})
+_PRIMARY_TOKENS = frozenset({"edit", "page", "next", "prev", "set"})
 _NEUTRAL_TOKENS = frozenset({"custom", "copy"})
 # Admin section pages are navigation, not actions.
 _ADMIN_NAV_TOKENS = frozenset(
     {"menu", "pending", "users", "orders", "products", "payments", "stats", "support"}
 )
 
-_DANGER_MARKS = "❌✖🗑"
-_PRIMARY_MARKS = "🔙"
+# 🔙 is the "Back" label — the owner wants Back buttons red.
+_DANGER_MARKS = "❌✖🗑🔙"
 _SUCCESS_MARKS = "✅💰💳🔗📱"
 
 
@@ -49,10 +49,12 @@ def derive_style(
     url: Optional[str] = None,
     text: Optional[str] = None,
 ) -> Optional[str]:
+    if text and any(mark in text for mark in _DANGER_MARKS):
+        return STYLE_DANGER
     if callback_data:
         tokens = _tokens(callback_data)
         first = callback_data.split(":", 1)[0]
-        if tokens & _DANGER_TOKENS:
+        if tokens & _DANGER_TOKENS or first == "back":
             return STYLE_DANGER
         if first == "admin" and tokens & _ADMIN_NAV_TOKENS:
             return STYLE_PRIMARY
@@ -64,10 +66,6 @@ def derive_style(
     if url:
         return STYLE_SUCCESS
     if text:
-        if any(mark in text for mark in _DANGER_MARKS):
-            return STYLE_DANGER
-        if any(mark in text for mark in _PRIMARY_MARKS):
-            return STYLE_PRIMARY
         if any(mark in text for mark in _SUCCESS_MARKS):
             return STYLE_SUCCESS
     return None
