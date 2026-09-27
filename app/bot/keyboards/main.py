@@ -7,6 +7,7 @@ from aiogram.types import (
     ReplyKeyboardRemove,
 )
 
+from app.bot.keyboards.style import styled
 from app.config import settings
 from app.i18n import t
 
@@ -25,7 +26,7 @@ def _channel_join_url() -> str:
 
 
 def get_subscribe_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -38,13 +39,13 @@ def get_subscribe_keyboard() -> InlineKeyboardMarkup:
                 )
             ],
         ]
-    )
+    ))
 
 
 def get_language_keyboard() -> InlineKeyboardMarkup:
     from app.i18n import LANGS, LANG_LABELS
 
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -60,7 +61,7 @@ def get_language_keyboard() -> InlineKeyboardMarkup:
                 )
             ]
         ]
-    )
+    ))
 
 
 def get_main_menu_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
@@ -104,7 +105,7 @@ def get_main_menu_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
                 )
             ]
         )
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+    return styled(InlineKeyboardMarkup(inline_keyboard=rows))
 
 
 def get_remove_keyboard() -> ReplyKeyboardRemove:

@@ -9,6 +9,7 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
+from app.bot.keyboards.style import styled
 from app.bot.filters import AdminFilter
 from app.bot.keyboards import (
     format_product_button,
@@ -65,7 +66,7 @@ def _review_keyboard(order_id: int | None = None):
 
     if order_id is None:
         return None
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -74,7 +75,7 @@ def _review_keyboard(order_id: int | None = None):
                 )
             ]
         ]
-    )
+    ))
 
 ORDER_ICONS: dict[str, str] = {
     OrderStatus.PENDING: "⏳",
@@ -695,7 +696,7 @@ async def admin_products(call: CallbackQuery, session=None) -> None:
 
     await safe_edit_text(call.message, 
         "\n".join(lines),
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
+        reply_markup=styled(InlineKeyboardMarkup(inline_keyboard=buttons)),
     )
     await safe_answer(call)
 

@@ -12,6 +12,7 @@ from aiogram.types import (
 )
 from sqlalchemy import func, select
 
+from app.bot.keyboards.style import styled
 from app.bot.keyboards import get_main_menu_keyboard
 from app.constants import OrderStatus, TransactionType
 from app.database.models import Order, Transaction, User
@@ -100,7 +101,7 @@ def _profile_text(user: User, stats: dict | None = None) -> str:
 
 
 def _profile_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -113,7 +114,7 @@ def _profile_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
                 )
             ],
         ]
-    )
+    ))
 
 
 async def _show_profile(message: Message, session, db_user=None) -> None:

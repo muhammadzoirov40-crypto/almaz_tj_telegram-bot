@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from app.bot.keyboards.style import styled
 from app.constants.games import GAMES
 from app.database.models import Product
 from app.i18n import t
@@ -90,11 +91,11 @@ def get_game_keyboard() -> InlineKeyboardMarkup:
     rows.append(
         [InlineKeyboardButton(text=t("btn.back"), callback_data="back:menu")]
     )
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+    return styled(InlineKeyboardMarkup(inline_keyboard=rows))
 
 
 def get_uid_request_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -105,11 +106,11 @@ def get_uid_request_keyboard() -> InlineKeyboardMarkup:
                 ),
             ]
         ]
-    )
+    ))
 
 
 def get_account_confirm_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -129,11 +130,11 @@ def get_account_confirm_keyboard() -> InlineKeyboardMarkup:
                 ),
             ],
         ]
-    )
+    ))
 
 
 def get_ff_category_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -151,7 +152,7 @@ def get_ff_category_keyboard() -> InlineKeyboardMarkup:
                 ),
             ],
         ]
-    )
+    ))
 
 
 def get_products_keyboard(
@@ -171,11 +172,11 @@ def get_products_keyboard(
     buttons.append(
         [InlineKeyboardButton(text=t("btn.back"), callback_data=back_callback)]
     )
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+    return styled(InlineKeyboardMarkup(inline_keyboard=buttons))
 
 
 def get_order_confirm_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -192,11 +193,11 @@ def get_order_confirm_keyboard() -> InlineKeyboardMarkup:
                 ),
             ],
         ]
-    )
+    ))
 
 
 def get_payment_receipt_keyboard(order_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -209,12 +210,12 @@ def get_payment_receipt_keyboard(order_id: int) -> InlineKeyboardMarkup:
                 )
             ],
         ]
-    )
+    ))
 
 
 def get_cancel_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text=t("btn.cancel"), callback_data="order:cancel")]
         ]
-    )
+    ))

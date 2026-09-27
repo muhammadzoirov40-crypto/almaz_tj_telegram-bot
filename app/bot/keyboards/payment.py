@@ -8,12 +8,13 @@ from aiogram.types import (
     ReplyKeyboardRemove,
 )
 
+from app.bot.keyboards.style import styled, styled_reply
 from app.i18n import t
 
 
 def get_share_phone_keyboard() -> ReplyKeyboardMarkup:
     """One-tap: send the user's own Telegram phone number."""
-    return ReplyKeyboardMarkup(
+    return styled_reply(ReplyKeyboardMarkup(
         keyboard=[
             [
                 KeyboardButton(
@@ -26,7 +27,7 @@ def get_share_phone_keyboard() -> ReplyKeyboardMarkup:
         resize_keyboard=True,
         one_time_keyboard=False,
         input_field_placeholder="+992XXXXXXXXX",
-    )
+    ))
 
 
 def remove_reply_keyboard() -> ReplyKeyboardRemove:
@@ -48,11 +49,11 @@ def get_balance_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
         rows.append(
             [InlineKeyboardButton(text=t("btn.admin"), callback_data="admin:menu")]
         )
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+    return styled(InlineKeyboardMarkup(inline_keyboard=rows))
 
 
 def get_topup_amount_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(text="10 TJS", callback_data="bal:amt:10"),
@@ -73,11 +74,11 @@ def get_topup_amount_keyboard() -> InlineKeyboardMarkup:
                 ),
             ],
         ]
-    )
+    ))
 
 
 def get_payment_method_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -90,11 +91,11 @@ def get_payment_method_keyboard() -> InlineKeyboardMarkup:
                 )
             ],
         ]
-    )
+    ))
 
 
 def get_balance_cancel_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -105,7 +106,7 @@ def get_balance_cancel_keyboard() -> InlineKeyboardMarkup:
                 ),
             ]
         ]
-    )
+    ))
 
 
 def get_balance_confirm_keyboard(url: str | None = None) -> InlineKeyboardMarkup:
@@ -124,11 +125,11 @@ def get_balance_confirm_keyboard(url: str | None = None) -> InlineKeyboardMarkup
             0,
             [InlineKeyboardButton(text=t("btn.pay_go"), url=url)],
         )
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+    return styled(InlineKeyboardMarkup(inline_keyboard=rows))
 
 
 def get_balance_receipt_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -141,11 +142,11 @@ def get_balance_receipt_keyboard() -> InlineKeyboardMarkup:
                 )
             ],
         ]
-    )
+    ))
 
 
 def get_balance_topup_review_keyboard(request_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -158,4 +159,4 @@ def get_balance_topup_review_keyboard(request_id: int) -> InlineKeyboardMarkup:
                 ),
             ]
         ]
-    )
+    ))

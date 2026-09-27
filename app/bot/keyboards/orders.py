@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from app.bot.keyboards.style import styled
 from app.i18n import t
 
 
 def get_orders_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -17,4 +18,4 @@ def get_orders_keyboard() -> InlineKeyboardMarkup:
                 ),
             ]
         ]
-    )
+    ))

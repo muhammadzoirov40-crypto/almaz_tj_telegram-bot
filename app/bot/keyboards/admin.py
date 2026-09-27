@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from app.bot.keyboards.style import styled
 from app.i18n import t
 
 
 def get_admin_menu_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(text=t("admin.stats"), callback_data="admin:stats"),
@@ -28,11 +29,11 @@ def get_admin_menu_keyboard() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text=t("btn.back"), callback_data="back:menu"),
             ],
         ]
-    )
+    ))
 
 
 def get_block_menu_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -53,11 +54,11 @@ def get_block_menu_keyboard() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text=t("btn.back"), callback_data="admin:menu"),
             ],
         ]
-    )
+    ))
 
 
 def get_order_review_keyboard(order_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -68,7 +69,7 @@ def get_order_review_keyboard(order_id: int) -> InlineKeyboardMarkup:
                 ),
             ]
         ]
-    )
+    ))
 
 
 def get_pending_orders_keyboard(order_ids: list[int]) -> InlineKeyboardMarkup:
@@ -86,21 +87,21 @@ def get_pending_orders_keyboard(order_ids: list[int]) -> InlineKeyboardMarkup:
         for oid in order_ids
     ]
     rows.append([InlineKeyboardButton(text=t("btn.back"), callback_data="admin:menu")])
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+    return styled(InlineKeyboardMarkup(inline_keyboard=rows))
 
 
 def get_admin_back_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text=t("btn.back"), callback_data="admin:menu")]
         ]
-    )
+    ))
 
 
 def get_balance_topup_approved_keyboard(
     request_id: int,
 ) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -114,11 +115,11 @@ def get_balance_topup_approved_keyboard(
                 )
             ],
         ]
-    )
+    ))
 
 
 def get_product_actions_keyboard(product_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    return styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -134,4 +135,4 @@ def get_product_actions_keyboard(product_id: int) -> InlineKeyboardMarkup:
             ],
             [InlineKeyboardButton(text=t("btn.back"), callback_data="admin:products")],
         ]
-    )
+    ))
