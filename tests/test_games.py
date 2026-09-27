@@ -19,7 +19,6 @@ def test_catalog_has_provider_games():
     expected = {
         "ff",
         "pubg",
-        "stars",
         "bloodstrike",
         "arena_breakout",
         "arena_breakout_infinite",

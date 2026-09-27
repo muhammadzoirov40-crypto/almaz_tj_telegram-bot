@@ -32,12 +32,6 @@ GAMES: tuple[Game, ...] = (
         product_prefixes=("PUBG ",),
     ),
     Game(
-        key="stars",
-        label="Stars",
-        emoji="⭐",
-        product_prefixes=("Stars",),
-    ),
-    Game(
         key="bloodstrike",
         label="Blood Strike",
         emoji="🩸",
@@ -70,13 +64,13 @@ GAMES: tuple[Game, ...] = (
     ),
     Game(
         key="mlbb_ru",
-        label="Mobile Legends (RU)",
+        label="Mobile Legends: Bang Bang (регион Russia)",
         emoji="🇷🇺",
         product_prefixes=("MLBB RU ",),
     ),
     Game(
         key="mlbb_cis",
-        label="Mobile Legends (CIS)",
+        label="Mobile Legends: Bang Bang (Кыргызстан, Беларусь)",
         emoji="🌏",
         product_prefixes=("MLBB CIS ",),
     ),

@@ -51,10 +51,6 @@ DEFAULT_PRODUCTS = [
     ("PUBG 325 UC", 325, Decimal("48.95")),
     ("PUBG 660 UC", 660, Decimal("93.70")),
     ("PUBG 1800 UC", 1800, Decimal("241")),
-    # Stars
-    ("Stars 100", 100, Decimal("10.00")),
-    ("Stars 500", 500, Decimal("45.00")),
-    ("Stars 1000", 1000, Decimal("85.00")),
     # Blood Strike
     ("Blood Strike 80 Gold", 80, Decimal("8.00")),
     ("Blood Strike 420 Gold", 420, Decimal("36.00")),

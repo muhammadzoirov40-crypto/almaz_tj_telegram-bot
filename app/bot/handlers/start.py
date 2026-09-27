@@ -15,7 +15,7 @@ router = Router(name="start")
 START_TEXT = (
     "Салом, хуш омадед ба боти DANAT.TJ 🏆\n\n"
     "Арзонтарин алмаз дар Тоҷикистон\n"
-    "Free Fire • PUBG • Stars\n"
+    "Free Fire • PUBG • Mobile Legends\n"
     "ва дигар бозиҳо\n"
     "1-5 дақиқа • 100% беҳтар\n\n"
 )
