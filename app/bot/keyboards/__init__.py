@@ -17,7 +17,6 @@ from app.bot.keyboards.main import (
 )
 from app.bot.keyboards.orders import get_orders_keyboard
 from app.bot.keyboards.payment import (
-    CANCEL_TOPUP_TEXT,
     get_balance_cancel_keyboard,
     get_balance_confirm_keyboard,
     get_balance_keyboard,
@@ -66,7 +65,6 @@ __all__ = [
     "get_balance_topup_review_keyboard",
     "get_share_phone_keyboard",
     "remove_reply_keyboard",
-    "CANCEL_TOPUP_TEXT",
     "get_admin_menu_keyboard",
     "get_admin_back_keyboard",
     "get_block_menu_keyboard",

@@ -8,8 +8,7 @@ from aiogram.types import (
     ReplyKeyboardRemove,
 )
 
-CANCEL_TOPUP_TEXT = "❌ Бекор кардан"
-SHARE_PHONE_TEXT = "📱 Рақами манро фиристодан"
+from app.i18n import t
 
 
 def get_share_phone_keyboard() -> ReplyKeyboardMarkup:
@@ -18,11 +17,11 @@ def get_share_phone_keyboard() -> ReplyKeyboardMarkup:
         keyboard=[
             [
                 KeyboardButton(
-                    text="📱 Рақами худамро фиристодан",
+                    text=t("btn.share_phone"),
                     request_contact=True,
                 )
             ],
-            [KeyboardButton(text=CANCEL_TOPUP_TEXT)],
+            [KeyboardButton(text=t("btn.cancel"))],
         ],
         resize_keyboard=True,
         one_time_keyboard=False,
@@ -38,14 +37,16 @@ def get_balance_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
     rows = [
         [
             InlineKeyboardButton(
-                text="💳 Пур кардани баланс", callback_data="balance:topup"
+                text=t("btn.add_balance"), callback_data="balance:topup"
             ),
-            InlineKeyboardButton(text="🔙 Менюи асосӣ", callback_data="back:menu"),
+            InlineKeyboardButton(
+                text=t("btn.back_menu"), callback_data="back:menu"
+            ),
         ],
     ]
     if is_admin:
         rows.append(
-            [InlineKeyboardButton(text="🛠 Админ", callback_data="admin:menu")]
+            [InlineKeyboardButton(text=t("btn.admin"), callback_data="admin:menu")]
         )
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -63,11 +64,13 @@ def get_topup_amount_keyboard() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(
-                    text="✏️ Маблағи дигар", callback_data="bal:amt:custom"
+                    text=t("btn.custom_amount"), callback_data="bal:amt:custom"
                 )
             ],
             [
-                InlineKeyboardButton(text="🔙 Менюи асосӣ", callback_data="back:menu"),
+                InlineKeyboardButton(
+                    text=t("btn.back_menu"), callback_data="back:menu"
+                ),
             ],
         ]
     )
@@ -81,7 +84,11 @@ def get_payment_method_keyboard() -> InlineKeyboardMarkup:
                     text="🏙 Dushanbe City", callback_data="paymethod:ds"
                 )
             ],
-            [InlineKeyboardButton(text="🔙 Бозгашт", callback_data="balance:topup")],
+            [
+                InlineKeyboardButton(
+                    text=t("btn.back"), callback_data="balance:topup"
+                )
+            ],
         ]
     )
 
@@ -91,10 +98,10 @@ def get_balance_cancel_keyboard() -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🔙 Бозгашт", callback_data="balance:topup"
+                    text=t("btn.back"), callback_data="balance:topup"
                 ),
                 InlineKeyboardButton(
-                    text=CANCEL_TOPUP_TEXT, callback_data="balance:cancel"
+                    text=t("btn.cancel"), callback_data="balance:cancel"
                 ),
             ]
         ]
@@ -105,17 +112,17 @@ def get_balance_confirm_keyboard(url: str | None = None) -> InlineKeyboardMarkup
     rows = [
         [
             InlineKeyboardButton(
-                text="✅ Тасдиқи пардохт", callback_data="balance:confirm"
+                text=t("btn.pay_confirm"), callback_data="balance:confirm"
             ),
             InlineKeyboardButton(
-                text="❌ Бекор", callback_data="balance:cancel"
+                text=t("btn.pay_cancel"), callback_data="balance:cancel"
             ),
         ]
     ]
     if url:
         rows.insert(
             0,
-            [InlineKeyboardButton(text="🔗 Гузариш ба пардохт", url=url)],
+            [InlineKeyboardButton(text=t("btn.pay_go"), url=url)],
         )
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -125,12 +132,12 @@ def get_balance_receipt_keyboard() -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🔙 Менюи асосӣ", callback_data="back:menu"
+                    text=t("btn.back_menu"), callback_data="back:menu"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text=CANCEL_TOPUP_TEXT, callback_data="balance:cancel"
+                    text=t("btn.cancel"), callback_data="balance:cancel"
                 )
             ],
         ]
@@ -142,11 +149,11 @@ def get_balance_topup_review_keyboard(request_id: int) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="✅ Қабул",
+                    text=t("btn.accept"),
                     callback_data=f"admin:bal:accept:{request_id}",
                 ),
                 InlineKeyboardButton(
-                    text="❌ Рад",
+                    text=t("btn.reject"),
                     callback_data=f"admin:bal:reject:{request_id}",
                 ),
             ]
