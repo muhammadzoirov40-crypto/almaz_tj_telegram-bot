@@ -40,6 +40,21 @@ def is_valid_username(value: str) -> bool:
     return bool(USERNAME_PATTERN.match(value or ""))
 
 
+# MLBB zone / server id: a short numeric code (e.g. 2001).
+ZONE_PATTERN = re.compile(r"^\d{2,10}$")
+
+
+def normalize_zone(value: str) -> str:
+    return (value or "").strip().lstrip("@")
+
+
+def validate_zone(value: str) -> tuple[bool, Optional[str]]:
+    zone = normalize_zone(value)
+    if not zone or not ZONE_PATTERN.match(zone):
+        return False, t("val.zone_invalid")
+    return True, None
+
+
 def validate_topup_amount(value: str) -> tuple[bool, Optional[str], Optional[Decimal]]:
     raw = (value or "").strip().replace(",", ".")
     if not raw:

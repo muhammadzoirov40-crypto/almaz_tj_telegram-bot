@@ -10,6 +10,8 @@ class Game:
     emoji: str
     product_prefixes: tuple[str, ...] = field(default_factory=tuple)
     product_excludes: tuple[str, ...] = field(default_factory=tuple)
+    # FireLoot needs a `zone` (server id) for these games on /order.
+    needs_zone: bool = False
 
     @property
     def button_text(self) -> str:
@@ -67,12 +69,14 @@ GAMES: tuple[Game, ...] = (
         label="Mobile Legends: Bang Bang (RU)",
         emoji="🇷🇺",
         product_prefixes=("MLBB RU ",),
+        needs_zone=True,
     ),
     Game(
         key="mlbb_cis",
         label="Mobile Legends: Bang Bang (CIS)",
         emoji="🌏",
         product_prefixes=("MLBB CIS ",),
+        needs_zone=True,
     ),
 )
 
@@ -87,6 +91,11 @@ def is_known_game(key: str) -> bool:
 
 def game_label(key: str) -> str:
     return GAME_LABELS.get(key, key)
+
+
+def game_needs_zone(key: str) -> bool:
+    game = GAME_BY_KEY.get(key)
+    return bool(game and game.needs_zone)
 
 
 def match_products(game_key: str, products: list) -> list:

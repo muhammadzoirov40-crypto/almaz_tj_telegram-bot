@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     )
     fireloot_api_key: str = Field(default="", alias="FIRELOOT_API_KEY")
 
+    # Catalogue pricing: FireLoot sells in USD, the bot sells in TJS.
+    catalog_usd_tjs_rate: float = Field(default=10.7, alias="CATALOG_USD_TJS_RATE")
+    catalog_margin: float = Field(default=0.05, alias="CATALOG_MARGIN")
+
     @property
     def effective_topup_api_url(self) -> str:
         return self.free_fire_api_url or self.topup_api_url

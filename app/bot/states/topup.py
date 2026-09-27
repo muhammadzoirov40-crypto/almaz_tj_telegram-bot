@@ -7,6 +7,7 @@ class TopUpStates(StatesGroup):
     choosing_game = State()
     choosing_product = State()
     waiting_uid = State()
+    waiting_zone = State()
     confirming_account = State()
     confirming_order = State()
 

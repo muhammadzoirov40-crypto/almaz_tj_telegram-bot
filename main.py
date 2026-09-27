@@ -116,47 +116,75 @@ async def ensure_schema() -> None:
     except Exception:
         logger.warning("Could not ensure users.lang column", exc_info=True)
 
+    # MLBB products need a FireLoot zone (server id) on the order payload.
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(
+                text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS zone VARCHAR(32)")
+            )
+    except Exception:
+        logger.warning("Could not ensure orders.zone column", exc_info=True)
+
     factory = get_session_factory()
     async with factory() as session:
-        result = await session.execute(select(Product))
-        existing = {p.name: p for p in result.scalars().all()}
+        imported = False
+        if settings.fireloot_api_key:
+            try:
+                from app.services.catalog_import import import_catalog
 
-        default_names = {name for name, _, _ in DEFAULT_PRODUCTS}
-        for name, product in existing.items():
-            if name not in default_names:
-                product.is_active = False
+                stats = await import_catalog(session)
+                imported = not stats.get("skipped", False)
+            except Exception:
+                logger.exception("FireLoot catalogue import failed")
 
-        for name, diamonds, price in DEFAULT_PRODUCTS:
-            product = existing.get(name)
-            if product is None:
-                session.add(
-                    Product(
-                        name=name,
-                        diamonds=diamonds,
-                        price=price,  # type: ignore[arg-type]
-                        currency="TJS",
-                        is_active=True,
-                    )
-                )
-            else:
-                product.diamonds = diamonds
-                product.price = price  # type: ignore[assignment]
-                product.is_active = True
+        if not imported:
+            await _seed_default_products(session)
 
         await session.commit()
-        logger.info("Synced products with DEFAULT_PRODUCTS")
+        logger.info("Product catalogue ready")
+
+
+async def _seed_default_products(session) -> None:
+    """Offline fallback: the hand-maintained product list."""
+    result = await session.execute(select(Product))
+    existing = {p.name: p for p in result.scalars().all()}
+
+    default_names = {name for name, _, _ in DEFAULT_PRODUCTS}
+    for name, product in existing.items():
+        if name not in default_names:
+            product.is_active = False
+
+    for name, diamonds, price in DEFAULT_PRODUCTS:
+        product = existing.get(name)
+        if product is None:
+            session.add(
+                Product(
+                    name=name,
+                    diamonds=diamonds,
+                    price=price,  # type: ignore[arg-type]
+                    currency="TJS",
+                    is_active=True,
+                )
+            )
+        else:
+            product.diamonds = diamonds
+            product.price = price  # type: ignore[assignment]
+            product.is_active = True
+    logger.info("Synced products with DEFAULT_PRODUCTS")
 
 
 async def _sync_fireloot_catalog_loop() -> None:
-    """Keep product → SKU mapping fresh (catalogue changes every 10-15 min)."""
-    from app.services.fireloot_catalog import SYNC_INTERVAL, sync_product_skus
+    """Keep the product catalogue (SKUs + prices) fresh every 15 minutes."""
+    from app.services.catalog_import import import_catalog
+    from app.services.fireloot_catalog import SYNC_INTERVAL
 
     while True:
         try:
             async with session_scope() as session:
-                assigned = await sync_product_skus(session)
-                if assigned:
-                    logger.info("FireLoot SKU mapping: %s", assigned)
+                stats = await import_catalog(session)
+                if not stats.get("skipped"):
+                    await session.commit()
+                    logger.info("FireLoot catalogue sync: %s", stats)
         except asyncio.CancelledError:
             raise
         except Exception:

@@ -17,7 +17,7 @@ class ProductRepository:
         stmt = (
             select(Product)
             .where(Product.is_active.is_(True))
-            .order_by(Product.diamonds.asc())
+            .order_by(Product.price.asc(), Product.id.asc())
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
@@ -67,6 +67,10 @@ class ProductRepository:
         return product
 
     async def list_all(self, limit: int = 100) -> list[Product]:
-        stmt = select(Product).order_by(Product.diamonds.asc()).limit(limit)
+        stmt = (
+            select(Product)
+            .order_by(Product.price.asc(), Product.id.asc())
+            .limit(limit)
+        )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())

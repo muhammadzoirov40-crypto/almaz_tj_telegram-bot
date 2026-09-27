@@ -41,6 +41,7 @@ class OrderService:
         product: Product,
         free_fire_uid: str,
         deduct_balance: bool = True,
+        zone: Optional[str] = None,
     ) -> Order:
         if not product.is_active:
             raise OrderError(t("svc.product_inactive"))
@@ -59,6 +60,7 @@ class OrderService:
             amount=product.price,
             currency=product.currency,
             status=OrderStatus.PENDING,
+            zone=zone,
         )
         if deduct_balance:
             await self.transactions.create(

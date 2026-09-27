@@ -54,6 +54,7 @@ class MockTopUpProvider(TopUpProvider):
         product: str,
         order_id: int,
         sku: str | None = None,
+        zone: str | None = None,
     ) -> TopUpResult:
         reference = f"mocktop_{uuid4().hex[:16]}"
         logger.info(
@@ -538,12 +539,17 @@ class RealTopUpProvider(TopUpProvider):
     }
 
     async def _fireloot_order(
-        self, uid: str, sku: str, order_id: int, reference: str
+        self,
+        uid: str,
+        sku: str,
+        order_id: int,
+        reference: str,
+        zone: str | None = None,
     ) -> TopUpResult:
         external_id = f"order-{order_id}"
         try:
             data = await self.fireloot.order(
-                external_id=external_id, sku=sku, uid=uid
+                external_id=external_id, sku=sku, uid=uid, zone=zone
             )
         except FireLootError as exc:
             logger.warning(
@@ -603,12 +609,13 @@ class RealTopUpProvider(TopUpProvider):
         product: str,
         order_id: int,
         sku: str | None = None,
+        zone: str | None = None,
     ) -> TopUpResult:
         reference = f"realtop_{order_id}_{uuid4().hex[:8]}"
 
         # FireLoot partner delivery (preferred): needs a mapped SKU.
         if sku and self.fireloot.configured:
-            return await self._fireloot_order(uid, sku, order_id, reference)
+            return await self._fireloot_order(uid, sku, order_id, reference, zone)
 
         if not self.api_key:
             return TopUpResult(

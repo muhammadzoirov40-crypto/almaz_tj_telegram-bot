@@ -115,7 +115,7 @@ def _order_detail(order: Order) -> str:
     if user is not None:
         user_label = f"@{user.username}" if user.username else str(user.telegram_id)
     status_label = _status_label(order.status)
-    return t(
+    text = t(
         "adm.detail",
         id=order.id,
         product=product_name,
@@ -125,6 +125,9 @@ def _order_detail(order: Order) -> str:
         user=user_label,
         status=status_label,
     )
+    if getattr(order, "zone", None):
+        text += "\n" + t("adm.zone_line", zone=order.zone)
+    return text
 
 
 @router.message(Command("admin"))

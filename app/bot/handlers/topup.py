@@ -25,6 +25,7 @@ from app.constants import OrderStatus
 from app.constants.games import (
     GAME_LABELS,
     game_label as _catalog_game_label,
+    game_needs_zone,
     is_known_game,
     match_products,
 )
@@ -35,7 +36,12 @@ from app.services.notification_service import notification_service
 from app.services.order_service import OrderError, OrderService
 from app.services.user_service import UserService
 from app.utils.logger import get_logger
-from app.utils.validators import normalize_uid, validate_uid
+from app.utils.validators import (
+    normalize_uid,
+    normalize_zone,
+    validate_uid,
+    validate_zone,
+)
 
 logger = get_logger(__name__)
 
@@ -144,6 +150,7 @@ async def on_topup_callback(
 @router.message(TopUpStates.choosing_game, F.text.in_(labels_for("btn.cancel")))
 @router.message(TopUpStates.choosing_product, F.text.in_(labels_for("btn.cancel")))
 @router.message(TopUpStates.waiting_uid, F.text.in_(labels_for("btn.cancel")))
+@router.message(TopUpStates.waiting_zone, F.text.in_(labels_for("btn.cancel")))
 @router.message(TopUpStates.confirming_account, F.text.in_(labels_for("btn.cancel")))
 @router.message(TopUpStates.confirming_order, F.text.in_(labels_for("btn.cancel")))
 async def cancel_topup(
@@ -487,9 +494,7 @@ async def process_uid(
         return
 
     nickname = info.nickname.strip()
-    await state.update_data(uid=uid, nickname=nickname or "—")
-    await state.set_state(TopUpStates.confirming_account)
-
+    game_label = _catalog_game_label(game)
     if nickname:
         name_line = t("top.name_line", nickname=nickname)
     else:
@@ -498,10 +503,49 @@ async def process_uid(
             short_note = info.message
         name_line = t("top.name_unknown", note=short_note)
 
+    await state.update_data(
+        uid=uid,
+        nickname=nickname or "—",
+        zone=None,
+        verify_game=info.game or game_label,
+        name_line=name_line,
+    )
+
+    # MLBB (FireLoot) needs the zone/server id on the order payload.
+    if game_needs_zone(game):
+        await state.set_state(TopUpStates.waiting_zone)
+        await message.answer(
+            t("top.zone_prompt", game_label=game_label),
+            reply_markup=get_uid_request_keyboard(),
+        )
+        return
+
+    await _send_account_verify(message, state)
+
+
+async def _send_account_verify(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    await state.set_state(TopUpStates.confirming_account)
     await message.answer(
-        t("top.verify", game=info.game, uid=uid, name=name_line),
+        t(
+            "top.verify",
+            game=data.get("verify_game") or "",
+            uid=data.get("uid") or "",
+            name=data.get("name_line") or "",
+        ),
         reply_markup=get_account_confirm_keyboard(),
     )
+
+
+@router.message(TopUpStates.waiting_zone)
+async def process_zone(message: Message, state: FSMContext) -> None:
+    ok, error = validate_zone(message.text or "")
+    if not ok:
+        await message.answer(error or t("val.zone_invalid"))
+        return
+
+    await state.update_data(zone=normalize_zone(message.text or ""))
+    await _send_account_verify(message, state)
 
 
 @router.callback_query(F.data == "account:no")
@@ -565,6 +609,9 @@ async def _show_order_confirm(
         currency=product.currency,
         after=_fmt_money(after),
     )
+    zone = data.get("zone")
+    if zone:
+        text += "\n" + t("top.zone_line", zone=zone)
     await state.set_state(TopUpStates.confirming_order)
     await safe_edit_text(call.message, text, reply_markup=get_order_confirm_keyboard())
     await safe_answer(call)
@@ -622,6 +669,7 @@ async def on_order_pay(
             user=user,
             product=product,
             free_fire_uid=uid,
+            zone=data.get("zone"),
             deduct_balance=True,
         )
     except OrderError as exc:

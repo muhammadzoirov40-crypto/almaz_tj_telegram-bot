@@ -24,6 +24,7 @@ class OrderRepository:
         amount: Decimal,
         currency: str,
         status: str = OrderStatus.PENDING,
+        zone: Optional[str] = None,
     ) -> Order:
         order = Order(
             user_id=user_id,
@@ -32,6 +33,7 @@ class OrderRepository:
             amount=amount,
             currency=currency,
             status=status,
+            zone=zone,
         )
         self.session.add(order)
         await self.session.flush()

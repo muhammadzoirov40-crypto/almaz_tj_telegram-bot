@@ -89,12 +89,13 @@ async def sync_product_skus(
     )
     assigned: dict[str, str] = {}
     for product in result.scalars().all():
+        if product.sku:
+            # Exact 1:1 mapping written by catalog_import — never override it.
+            continue
         sku = guess_sku(product.name, products)
-        if sku and product.sku != sku:
+        if sku:
             product.sku = sku
             assigned[product.name] = sku
-        elif sku:
-            product.sku = sku
 
     await session.flush()
     if assigned:

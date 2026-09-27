@@ -81,6 +81,8 @@ class Order(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), index=True)
     free_fire_uid: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    # FireLoot zone / server id (MLBB); NULL for games without a zone.
+    zone: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(8), default="TJS", nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="PENDING", index=True)

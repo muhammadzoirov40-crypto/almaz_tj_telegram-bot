@@ -90,6 +90,7 @@ class TopUpProvider(ABC):
         product: str,
         order_id: int,
         sku: Optional[str] = None,
+        zone: Optional[str] = None,
     ) -> TopUpResult:
         raise NotImplementedError
 

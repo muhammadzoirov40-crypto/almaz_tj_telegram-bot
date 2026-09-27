@@ -63,6 +63,7 @@ class TopUpService:
                 product=product_name,
                 order_id=order.id,
                 sku=sku,
+                zone=getattr(order, "zone", None),
             )
         except Exception as exc:
             logger.exception("Top-up request failed order_id=%s", order_id)
