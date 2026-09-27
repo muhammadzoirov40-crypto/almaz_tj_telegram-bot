@@ -138,9 +138,11 @@ async def import_catalog(
 ) -> dict[str, Any]:
     """Upsert the FireLoot catalogue into `products` (1:1 by SKU).
 
-    Every sellable SKU becomes an active product with its own SKU, prices are
-    recalculated from the partner price. Products not present in the catalogue
-    are deactivated so the bot only sells what FireLoot can deliver.
+    Every sellable SKU becomes an active product with its own SKU. Prices of
+    products that already exist are left untouched (the owner sets them); only
+    newly created products get the calculated price. Products not present in
+    the catalogue are deactivated so the bot only sells what FireLoot can
+    deliver.
     """
     if products is None:
         client = client or FireLootClient()
@@ -184,7 +186,6 @@ async def import_catalog(
         if (
             product.name != name
             or product.sku != sku
-            or product.price != price
             or product.diamonds != qty
             or product.currency != "TJS"
             or not product.is_active
@@ -192,7 +193,6 @@ async def import_catalog(
             updated += 1
         product.name = name
         product.sku = sku
-        product.price = price  # type: ignore[assignment]
         product.diamonds = qty
         product.currency = "TJS"
         product.is_active = True

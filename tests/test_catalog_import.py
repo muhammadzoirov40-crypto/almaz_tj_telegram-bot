@@ -169,3 +169,66 @@ def test_button_labels_are_rendered_in_every_language():
                 assert "Пропуск" not in label, (sku, lang, label)
     finally:
         set_lang("ru")
+
+
+class _FakeResult:
+    def __init__(self, items):
+        self._items = items
+
+    def scalars(self):
+        return self
+
+    def all(self):
+        return self._items
+
+
+class _FakeSession:
+    def __init__(self, products):
+        self.products = list(products)
+        self.added = []
+
+    async def execute(self, stmt):
+        return _FakeResult(list(self.products))
+
+    def add(self, obj):
+        self.added.append(obj)
+        self.products.append(obj)
+
+    async def flush(self):
+        return None
+
+
+def _product(name, price, *, diamonds=0, sku=None, active=True):
+    from app.database.models import Product
+
+    return Product(
+        name=name,
+        diamonds=diamonds,
+        price=Decimal(price),
+        currency="TJS",
+        is_active=active,
+        sku=sku,
+    )
+
+
+async def test_import_keeps_owner_prices_and_deactivates_unknown():
+    from app.services.catalog_import import import_catalog
+
+    kept = _product("FF 110 Diamonds", "12.34", diamonds=110)
+    legacy = _product("FF 10 Diamonds", "5.00", diamonds=10)
+    session = _FakeSession([kept, legacy])
+
+    stats = await import_catalog(session, products=SAMPLE)
+
+    # price set by the owner must never be touched on re-import
+    assert kept.price == Decimal("12.34")
+    assert kept.sku == "diamonds_110"
+    assert kept.is_active is True
+    # unknown products stop selling
+    assert legacy.is_active is False
+
+    added = {p.name: p for p in session.added}
+    assert added["PUBG 325 UC"].price == price_tjs("4.704")
+    assert added["PUBG 325 UC"].sku == "pubg_uc_325"
+    assert len(added) == stats["created"] == 10
+    assert stats["deactivated"] == 1
