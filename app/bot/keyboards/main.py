@@ -7,6 +7,8 @@ from aiogram.types import (
     ReplyKeyboardRemove,
 )
 
+from app.config import settings
+
 MAIN_MENU_TEXT = "🏠 Асосӣ"
 ORDERS_TEXT = "📦 Фармоишҳои ман"
 PROFILE_TEXT = "👤 Саҳифаи ман"
@@ -16,6 +18,32 @@ SUPPORT_TEXT = "📞 Дастгирӣ ба админ"
 TOPUP_TEXT = "💎 Донат"
 ADMIN_TEXT = "🛠 Админ"
 CHANNEL_TEXT = "📢 Канал"
+
+SUBSCRIBE_CALLBACK = "sub:check"
+
+
+def _channel_join_url() -> str:
+    username = (settings.required_channel_username or "").strip().lstrip("@")
+    if not username:
+        return "https://t.me/"
+    return f"https://t.me/{username}"
+
+
+def get_subscribe_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="📢 Подписаться на канал", url=_channel_join_url()
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="✅ Проверить", callback_data=SUBSCRIBE_CALLBACK
+                )
+            ],
+        ]
+    )
 
 
 def get_main_menu_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:

@@ -7,7 +7,12 @@ from app.bot.keyboards.admin import (
     get_pending_orders_keyboard,
     get_product_actions_keyboard,
 )
-from app.bot.keyboards.main import get_main_menu_keyboard, get_remove_keyboard
+from app.bot.keyboards.main import (
+    SUBSCRIBE_CALLBACK,
+    get_main_menu_keyboard,
+    get_remove_keyboard,
+    get_subscribe_keyboard,
+)
 from app.bot.keyboards.orders import get_orders_keyboard
 from app.bot.keyboards.payment import (
     CANCEL_TOPUP_TEXT,
@@ -36,6 +41,8 @@ from app.bot.keyboards.topup import (
 __all__ = [
     "get_main_menu_keyboard",
     "get_remove_keyboard",
+    "get_subscribe_keyboard",
+    "SUBSCRIBE_CALLBACK",
     "get_products_keyboard",
     "format_product_button",
     "get_ff_category_keyboard",

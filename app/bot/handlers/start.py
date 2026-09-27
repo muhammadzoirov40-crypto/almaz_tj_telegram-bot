@@ -4,7 +4,9 @@ from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import ChatMemberUpdated, Message
 
-from app.bot.keyboards import get_main_menu_keyboard
+from app.bot.keyboards import get_main_menu_keyboard, get_subscribe_keyboard
+from app.bot.utils import safe_answer, safe_edit_text
+from app.services.subscribe_service import is_subscribed
 from app.services.user_service import UserService
 from app.utils.logger import get_logger
 
@@ -21,6 +23,13 @@ START_TEXT = (
 )
 
 START_FOOTER = "Лутфан аз менюи зерин интихоб кунед:"
+
+SUBSCRIBE_TEXT = (
+    "👋 Пеш аз оғоз ба канал мо обуна шавед!\n\n"
+    "1️⃣ Каналро кушоед ва тугмаи «Подписаться»-ро пахш кунед\n"
+    "2️⃣ Баъд тугмаи «✅ Проверить»-ро пахш кунед\n\n"
+    "Обуна шудед → менюи бот кушода мешавад."
+)
 
 
 def _user_block(user) -> str:
@@ -48,10 +57,51 @@ async def cmd_start(
     if created:
         logger.info("User created via /start telegram_id=%s", message.from_user.id)
 
+    bot = message.bot
+    if bot is not None and not await is_subscribed(bot, user.telegram_id):
+        await message.answer(
+            SUBSCRIBE_TEXT, reply_markup=get_subscribe_keyboard()
+        )
+        return
+
     await message.answer(
         START_TEXT + _user_block(user) + START_FOOTER,
         reply_markup=get_main_menu_keyboard(is_admin=user.is_admin),
     )
+
+
+@router.callback_query(F.data == "sub:check")
+async def on_subscribe_check(
+    call: CallbackQuery,
+    db_user=None,  # injected by UserMiddleware
+    session=None,  # injected by DatabaseMiddleware
+) -> None:
+    bot = call.bot
+    if bot is not None and not await is_subscribed(bot, call.from_user.id):
+        await safe_answer(
+            call,
+            "Шумо ҳанӯз обуна нестед. Каналро обуна шавед.",
+            show_alert=True,
+        )
+        return
+
+    user = db_user
+    if user is None and session is not None:
+        user, _ = await UserService(session).register_user(
+            telegram_id=call.from_user.id,
+            username=call.from_user.username,
+            first_name=call.from_user.first_name,
+            is_admin=False,
+        )
+
+    await safe_answer(call, "Обуна тасдиқ шуд!")
+    text = START_TEXT + (_user_block(user) if user else "") + START_FOOTER
+    markup = get_main_menu_keyboard(
+        is_admin=user.is_admin if user else False
+    )
+    edited = await safe_edit_text(call.message, text, reply_markup=markup)
+    if not edited and call.message is not None:
+        await call.message.answer(text, reply_markup=markup)
 
 
 @router.message(Command("menu"))

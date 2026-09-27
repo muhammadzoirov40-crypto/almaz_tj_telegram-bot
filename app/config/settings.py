@@ -86,6 +86,13 @@ class Settings(BaseSettings):
         default="@otzif_danat_tj", alias="OTZIF_CHANNEL_USERNAME"
     )
 
+    # Forced subscription gate on /start (public promo channel).
+    # Empty username + 0 id = gate disabled.
+    required_channel_id: int = Field(default=0, alias="REQUIRED_CHANNEL_ID")
+    required_channel_username: str = Field(
+        default="@_ff_almaz_tj_", alias="REQUIRED_CHANNEL_USERNAME"
+    )
+
     # Providers: "mock" (MVP/dev) or "real" (production)
     payment_provider: str = Field(default="mock", alias="PAYMENT_PROVIDER")
     topup_provider: str = Field(default="mock", alias="TOPUP_PROVIDER")
