@@ -80,7 +80,7 @@ def get_game_keyboard() -> InlineKeyboardMarkup:
         buttons[i : i + 2] for i in range(0, len(buttons), 2)
     ]
     rows.append(
-        [InlineKeyboardButton(text=CANCEL_TEXT, callback_data="topup:cancel")]
+        [InlineKeyboardButton(text="🔙 Бозгашт", callback_data="back:menu")]
     )
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
