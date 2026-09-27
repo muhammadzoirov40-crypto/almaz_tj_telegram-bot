@@ -85,3 +85,45 @@ def test_back_button_is_red_even_when_callback_is_not_back():
         if b.text.startswith("🔙")
     ]
     assert back and all(b.style == "danger" for b in back)
+
+
+def test_ff_categories_have_own_colors():
+    from app.bot.keyboards.topup import get_ff_category_keyboard
+
+    styles = _styles(get_ff_category_keyboard())
+    assert styles["cat:diamonds"] == "success"
+    assert styles["cat:vouchers"] == "primary"
+    assert styles["back:games"] == "danger"
+
+
+def test_product_buttons_split_by_kind():
+    from decimal import Decimal
+
+    from app.bot.keyboards.topup import get_products_keyboard
+    from app.database.models import Product
+
+    def _p(pid, name):
+        return Product(
+            id=pid,
+            name=name,
+            diamonds=0,
+            price=Decimal("9.00"),
+            currency="TJS",
+            is_active=True,
+        )
+
+    markup = get_products_keyboard(
+        [
+            _p(1, "FF Level Up Pass 6"),
+            _p(2, "FF Weekly Voucher"),
+            _p(3, "FF 110 Diamonds"),
+            _p(4, "PUBG 325 UC"),
+        ],
+        back_callback="back:cat",
+    )
+    styles = _styles(markup)
+    assert styles["product:1"] is None  # level pass — neutral grey
+    assert styles["product:2"] == "primary"  # voucher — blue
+    assert styles["product:3"] == "success"  # diamonds — green
+    assert styles["product:4"] == "success"  # PUBG — green
+    assert styles["back:cat"] == "danger"

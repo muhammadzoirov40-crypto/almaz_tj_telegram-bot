@@ -143,7 +143,9 @@ def get_ff_category_keyboard() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(
-                    text=t("btn.vouchers"), callback_data="cat:vouchers"
+                    text=t("btn.vouchers"),
+                    callback_data="cat:vouchers",
+                    style="primary",
                 ),
             ],
             [
@@ -172,7 +174,21 @@ def get_products_keyboard(
     buttons.append(
         [InlineKeyboardButton(text=t("btn.back"), callback_data=back_callback)]
     )
-    return styled(InlineKeyboardMarkup(inline_keyboard=buttons))
+    markup = styled(InlineKeyboardMarkup(inline_keyboard=buttons))
+    _paint_product_buttons(markup)
+    return markup
+
+
+def _paint_product_buttons(markup: InlineKeyboardMarkup) -> None:
+    """Level passes / vouchers get their own colour next to the diamonds."""
+    for row in markup.inline_keyboard:
+        for button in row:
+            if not (button.callback_data or "").startswith("product:"):
+                continue
+            if "Level Up Pass" in button.text:
+                button.style = None  # neutral grey, so it stands apart
+            elif "Voucher" in button.text:
+                button.style = "primary"  # blue
 
 
 def get_order_confirm_keyboard() -> InlineKeyboardMarkup:
