@@ -85,6 +85,16 @@ def _fmt_money(value: Decimal | str | float) -> str:
     return str(Decimal(str(value)).quantize(Decimal("0.01")))
 
 
+def _game_prompt(db_user: User | None) -> str:
+    """Game selection screen, with the user's balance when known."""
+    if db_user is None:
+        return GAME_PROMPT
+    return (
+        f"{GAME_PROMPT}\n\n"
+        f"💳 Хисоби шумо: {_fmt_money(db_user.balance)} с."
+    )
+
+
 async def _products_prompt(
     session: AsyncSession,
     game: str,
@@ -113,16 +123,28 @@ async def _products_prompt(
 
 @router.message(Command("topup"))
 @router.message(F.text == TOPUP_TEXT)
-async def cmd_topup(message: Message, state: FSMContext) -> None:
+async def cmd_topup(
+    message: Message,
+    state: FSMContext,
+    db_user: User | None = None,
+) -> None:
     await state.set_state(TopUpStates.choosing_game)
-    await message.answer(GAME_PROMPT, reply_markup=get_game_keyboard())
+    await message.answer(
+        _game_prompt(db_user), reply_markup=get_game_keyboard()
+    )
 
 
 @router.callback_query(F.data == "menu:topup")
-async def on_topup_callback(call: CallbackQuery, state: FSMContext) -> None:
+async def on_topup_callback(
+    call: CallbackQuery,
+    state: FSMContext,
+    db_user: User | None = None,
+) -> None:
     await state.clear()
     await state.set_state(TopUpStates.choosing_game)
-    await safe_edit_text(call.message, GAME_PROMPT, reply_markup=get_game_keyboard())
+    await safe_edit_text(
+        call.message, _game_prompt(db_user), reply_markup=get_game_keyboard()
+    )
     await safe_answer(call)
 
 
@@ -245,10 +267,16 @@ async def on_game_selected(
 
 
 @router.callback_query(F.data == "back:games")
-async def on_back_games(call: CallbackQuery, state: FSMContext) -> None:
+async def on_back_games(
+    call: CallbackQuery,
+    state: FSMContext,
+    db_user: User | None = None,
+) -> None:
     await state.set_state(TopUpStates.choosing_game)
     await state.update_data(category=None, product_id=None)
-    await safe_edit_text(call.message, GAME_PROMPT, reply_markup=get_game_keyboard())
+    await safe_edit_text(
+        call.message, _game_prompt(db_user), reply_markup=get_game_keyboard()
+    )
     await safe_answer(call)
 
 
@@ -308,7 +336,11 @@ async def on_category_selected(
 
 
 @router.callback_query(F.data == "back:categories")
-async def on_back_categories(call: CallbackQuery, state: FSMContext) -> None:
+async def on_back_categories(
+    call: CallbackQuery,
+    state: FSMContext,
+    db_user: User | None = None,
+) -> None:
     data = await state.get_data()
     game = data.get("game", "ff")
     await state.update_data(category=None, product_id=None)
@@ -320,7 +352,9 @@ async def on_back_categories(call: CallbackQuery, state: FSMContext) -> None:
             reply_markup=get_ff_category_keyboard(),
         )
     else:
-        await safe_edit_text(call.message, GAME_PROMPT, reply_markup=get_game_keyboard())
+        await safe_edit_text(
+            call.message, _game_prompt(db_user), reply_markup=get_game_keyboard()
+        )
     await safe_answer(call)
 
 
@@ -353,7 +387,7 @@ async def on_back_products(
     result = await _products_prompt(session, game, db_user, category=category)
     if result is None:
         await safe_edit_text(
-            call.message, GAME_PROMPT, reply_markup=get_game_keyboard()
+            call.message, _game_prompt(db_user), reply_markup=get_game_keyboard()
         )
         await safe_answer(call)
         return
@@ -516,7 +550,7 @@ async def _show_order_confirm(
     if not product_id or not uid:
         await _clear_topup_state(state)
         await safe_edit_text(
-            call.message, GAME_PROMPT, reply_markup=get_game_keyboard()
+            call.message, _game_prompt(db_user), reply_markup=get_game_keyboard()
         )
         await safe_answer(call)
         return
@@ -582,7 +616,7 @@ async def on_order_pay(
     if not product_id or not uid:
         await _clear_topup_state(state)
         await safe_edit_text(
-            call.message, GAME_PROMPT, reply_markup=get_game_keyboard()
+            call.message, _game_prompt(db_user), reply_markup=get_game_keyboard()
         )
         await safe_answer(call, "Маълумот ёфт нашуд.", show_alert=True)
         return
