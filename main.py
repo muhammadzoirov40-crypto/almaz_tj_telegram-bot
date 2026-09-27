@@ -219,6 +219,25 @@ async def _refund_order(session, order: Order, reason: str) -> bool:
     return True
 
 
+def _processing_orders_stmt():
+    """PROCESSING orders the FireLoot poller must check (GET /order/:ref).
+
+    FireLoot refs are short codes ("DMELC", "NEY90") with no known prefix, so
+    every referenced remote order is polled; local mock/realtop references are
+    excluded because they do not exist on FireLoot's side.
+    """
+    return (
+        select(Order)
+        .options(selectinload(Order.product), selectinload(Order.user))
+        .where(Order.status == OrderStatus.PROCESSING)
+        .where(Order.provider_order_id.is_not(None))
+        .where(~Order.provider_order_id.like("mocktop_%"))
+        .where(~Order.provider_order_id.like("realtop_%"))
+        .order_by(Order.id.asc())
+        .limit(25)
+    )
+
+
 async def _poll_fireloot_orders(bot: Bot) -> None:
     """Watch FireLoot orders stuck in PROCESSING (GET /order/:id)."""
     from app.providers.fireloot import FireLootClient, FireLootError
@@ -232,14 +251,7 @@ async def _poll_fireloot_orders(bot: Bot) -> None:
                 continue
 
             async with session_scope() as session:
-                result = await session.execute(
-                    select(Order)
-                    .options(selectinload(Order.product), selectinload(Order.user))
-                    .where(Order.status == OrderStatus.PROCESSING)
-                    .where(Order.provider_order_id.like("FL-%"))
-                    .order_by(Order.id.asc())
-                    .limit(25)
-                )
+                result = await session.execute(_processing_orders_stmt())
                 orders = list(result.scalars().all())
                 if not orders:
                     continue
