@@ -458,10 +458,8 @@ async def admin_order_accept(call: CallbackQuery, session=None) -> None:
     )
 
     user = order.user
+    product_name = format_product_button(order.product) if order.product else ""
     if user is not None:
-        product_name = (
-            format_product_button(order.product) if order.product else ""
-        )
         await notification_service.safe_send(
             user.telegram_id,
             f"✅ <b>Фармоиши шумо қабул шуд!</b>\n\n"
@@ -470,6 +468,16 @@ async def admin_order_accept(call: CallbackQuery, session=None) -> None:
             f"🆔 UID: <code>{order.free_fire_uid}</code>\n"
             f"Ҳолат: {ORDER_STATUS_LABELS.get(order.status, order.status)}",
             reply_markup=_review_keyboard(order.id),
+        )
+
+    if settings.otzif_channel_id:
+        await notification_service.safe_send(
+            settings.otzif_channel_id,
+            f"✅ <b>Фармоиш қабул шуд</b>\n\n"
+            f"📦 №{order.id}\n"
+            f"🎮 {product_name}\n"
+            f"🆔 UID: <code>{order.free_fire_uid}</code>\n"
+            f"Ҳолат: {ORDER_STATUS_LABELS.get(order.status, order.status)}",
         )
 
     logger.info("Admin accepted order_id=%s by=%s", order_id, call.from_user.id)

@@ -324,6 +324,68 @@ async def on_back_categories(call: CallbackQuery, state: FSMContext) -> None:
     await safe_answer(call)
 
 
+@router.callback_query(F.data == "back:products")
+async def on_back_products(
+    call: CallbackQuery,
+    state: FSMContext,
+    session: AsyncSession | None = None,
+    db_user: User | None = None,
+) -> None:
+    data = await state.get_data()
+    game = data.get("game", "ff")
+    category = data.get("category")
+    await state.update_data(product_id=None)
+    await state.set_state(TopUpStates.choosing_product)
+
+    if game == "ff" and not category:
+        await safe_edit_text(
+            call.message,
+            "🔥 <b>Free Fire</b>\n\nГурӯҳро интихоб кунед:",
+            reply_markup=get_ff_category_keyboard(),
+        )
+        await safe_answer(call)
+        return
+
+    if session is None:
+        await safe_answer(call, "Хатогӣ. Дубора кӯшиш кунед.", show_alert=True)
+        return
+
+    result = await _products_prompt(session, game, db_user, category=category)
+    if result is None:
+        await safe_edit_text(
+            call.message, GAME_PROMPT, reply_markup=get_game_keyboard()
+        )
+        await safe_answer(call)
+        return
+
+    text, products, _ = result
+    back_callback = (
+        "back:categories" if game == "ff" and category else "back:games"
+    )
+    await safe_edit_text(
+        call.message,
+        text,
+        reply_markup=get_products_keyboard(
+            products, back_callback=back_callback
+        ),
+    )
+    await safe_answer(call)
+
+
+@router.callback_query(F.data == "back:uid")
+async def on_back_uid(call: CallbackQuery, state: FSMContext) -> None:
+    data = await state.get_data()
+    game = data.get("game", "ff")
+    game_label = _catalog_game_label(game)
+    await state.set_state(TopUpStates.waiting_uid)
+    await safe_edit_text(
+        call.message,
+        UID_PROMPT.format(game_label=game_label),
+        reply_markup=get_uid_request_keyboard(),
+    )
+    await safe_answer(call)
+
+
 @router.callback_query(F.data.startswith("product:"))
 async def on_product_selected(
     call: CallbackQuery,

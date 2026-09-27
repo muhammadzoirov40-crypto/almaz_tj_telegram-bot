@@ -90,8 +90,11 @@ def get_uid_request_keyboard() -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
+                    text="🔙 Бозгашт", callback_data="back:products"
+                ),
+                InlineKeyboardButton(
                     text=CANCEL_TEXT, callback_data="topup:cancel"
-                )
+                ),
             ]
         ]
     )
@@ -111,8 +114,11 @@ def get_account_confirm_keyboard() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(
+                    text="🔙 Бозгашт", callback_data="back:uid"
+                ),
+                InlineKeyboardButton(
                     text=CANCEL_TEXT, callback_data="topup:cancel"
-                )
+                ),
             ],
         ]
     )
@@ -171,8 +177,11 @@ def get_order_confirm_keyboard() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(
+                    text="🔙 Бозгашт", callback_data="back:products"
+                ),
+                InlineKeyboardButton(
                     text=CANCEL_TEXT, callback_data="topup:cancel"
-                )
+                ),
             ],
         ]
     )

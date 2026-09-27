@@ -96,8 +96,11 @@ def get_balance_cancel_keyboard() -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
+                    text="🔙 Бозгашт", callback_data="balance:topup"
+                ),
+                InlineKeyboardButton(
                     text=CANCEL_TOPUP_TEXT, callback_data="balance:cancel"
-                )
+                ),
             ]
         ]
     )
