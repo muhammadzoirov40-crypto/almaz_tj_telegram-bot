@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 from decimal import Decimal
+from html import escape
 
 from aiogram import F, Router
 from aiogram.filters import Command
@@ -44,6 +45,17 @@ router.message.filter(AdminFilter())
 router.callback_query.filter(AdminFilter())
 
 ADMIN_TEXT = "🛠 Админ"
+
+
+def _user_mention(user: User | None) -> str:
+    if user is None:
+        return "—"
+    name = escape((user.first_name or "").strip() or f"ID {user.telegram_id}")
+    if user.username:
+        return (
+            f'<a href="https://t.me/{escape(user.username)}">{name}</a>'
+        )
+    return f'<a href="tg://user?id={user.telegram_id}">{name}</a>'
 
 
 def _review_keyboard(order_id: int | None = None):
@@ -267,7 +279,8 @@ async def admin_balance_topup_accept(call: CallbackQuery, session=None) -> None:
             f"✅ <b>Шарҷ қабул шуд!</b>\n\n"
             f"📦 Дархост: №{request.id}\n"
             f"💰 Илова шуд: {request.amount} {request.currency}\n"
-            f"💳 Баланс: <b>{user.balance} TJS</b>",
+            f"💳 Баланс: <b>{user.balance} TJS</b>\n"
+            f"👤 Xaridor: {_user_mention(user)}",
         )
 
     logger.info(
@@ -477,7 +490,8 @@ async def admin_order_accept(call: CallbackQuery, session=None) -> None:
             f"📦 №{order.id}\n"
             f"🎮 {product_name}\n"
             f"🆔 UID: <code>{order.free_fire_uid}</code>\n"
-            f"Ҳолат: {ORDER_STATUS_LABELS.get(order.status, order.status)}",
+            f"Ҳолат: {ORDER_STATUS_LABELS.get(order.status, order.status)}\n"
+            f"👤 Xaridor: {_user_mention(user)}",
         )
 
     logger.info("Admin accepted order_id=%s by=%s", order_id, call.from_user.id)
