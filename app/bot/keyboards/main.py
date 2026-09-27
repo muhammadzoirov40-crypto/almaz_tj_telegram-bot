@@ -8,7 +8,9 @@ from aiogram.types import (
 )
 
 from app.config import settings
+from app.i18n import t
 
+# Kept for legacy `F.text ==` filters; live buttons use t("btn.*").
 MAIN_MENU_TEXT = "🏠 Асосӣ"
 ORDERS_TEXT = "📦 Фармоишҳои ман"
 PROFILE_TEXT = "👤 Саҳифаи ман"
@@ -20,6 +22,7 @@ ADMIN_TEXT = "🛠 Админ"
 CHANNEL_TEXT = "📢 Канал"
 
 SUBSCRIBE_CALLBACK = "sub:check"
+LANGUAGE_CALLBACK = "lang:show"
 
 
 def _channel_join_url() -> str:
@@ -37,39 +40,80 @@ def get_subscribe_keyboard() -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="📢 Подписаться на канал", url=_channel_join_url()
+                    text=t("sub.join"), url=_channel_join_url()
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="✅ Проверить", callback_data=SUBSCRIBE_CALLBACK
+                    text=t("sub.check"), callback_data=SUBSCRIBE_CALLBACK
                 )
             ],
         ]
     )
 
 
+def get_language_keyboard() -> InlineKeyboardMarkup:
+    from app.i18n import LANGS, LANG_LABELS
+
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=LANG_LABELS[lang], callback_data=f"lang:set:{lang}"
+                )
+            ]
+            for lang in LANGS
+        ]
+        + [
+            [
+                InlineKeyboardButton(
+                    text=t("btn.back_menu"), callback_data="back:menu"
+                )
+            ]
+        ]
+    )
+
+
 def get_main_menu_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
     rows = [
-        [InlineKeyboardButton(text=TOPUP_TEXT, callback_data="menu:topup")],
+        [InlineKeyboardButton(text=t("btn.donate"), callback_data="menu:topup")],
         [
             InlineKeyboardButton(
-                text="💳 Пур кардани баланс", callback_data="balance:topup"
+                text=t("btn.add_balance"), callback_data="balance:topup"
             ),
-            InlineKeyboardButton(text=BALANCE_TEXT, callback_data="menu:balance"),
+            InlineKeyboardButton(
+                text=t("btn.balance"), callback_data="menu:balance"
+            ),
         ],
-        [InlineKeyboardButton(text=PROMO_TEXT, callback_data="menu:promo")],
-        [InlineKeyboardButton(text=PROFILE_TEXT, callback_data="menu:profile")],
+        [InlineKeyboardButton(text=t("btn.promo"), callback_data="menu:promo")],
         [
             InlineKeyboardButton(
-                text="🏆 Харидорҳо", callback_data="menu:buyers"
+                text=t("btn.profile"), callback_data="menu:profile"
             )
         ],
-        [InlineKeyboardButton(text=SUPPORT_TEXT, callback_data="menu:support")],
+        [
+            InlineKeyboardButton(
+                text=t("btn.buyers"), callback_data="menu:buyers"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text=t("btn.support"), callback_data="menu:support"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text=t("btn.language"), callback_data=LANGUAGE_CALLBACK
+            )
+        ],
     ]
     if is_admin:
         rows.append(
-            [InlineKeyboardButton(text=ADMIN_TEXT, callback_data="admin:menu")]
+            [
+                InlineKeyboardButton(
+                    text=t("btn.admin"), callback_data="admin:menu"
+                )
+            ]
         )
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -80,14 +124,16 @@ def get_remove_keyboard() -> ReplyKeyboardRemove:
 
 async def get_bot_commands(is_admin: bool = False) -> list[BotCommand]:
     commands = [
-        BotCommand(command="start", description="Оғоз"),
-        BotCommand(command="menu", description="Менюи асосӣ"),
-        BotCommand(command="topup", description="Донат"),
-        BotCommand(command="orders", description="Фармоишҳо"),
-        BotCommand(command="profile", description="Саҳифаи ман"),
-        BotCommand(command="balance", description="Баланс"),
-        BotCommand(command="support", description="Дастгирӣ"),
+        BotCommand(command="start", description=t("cmd.start")),
+        BotCommand(command="menu", description=t("cmd.menu")),
+        BotCommand(command="topup", description=t("cmd.topup")),
+        BotCommand(command="orders", description=t("cmd.orders")),
+        BotCommand(command="profile", description=t("cmd.profile")),
+        BotCommand(command="balance", description=t("cmd.balance")),
+        BotCommand(command="support", description=t("cmd.support")),
     ]
     if is_admin:
-        commands.append(BotCommand(command="admin", description="Админ"))
+        commands.append(
+            BotCommand(command="admin", description=t("cmd.admin"))
+        )
     return commands

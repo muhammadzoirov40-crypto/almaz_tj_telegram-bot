@@ -94,6 +94,14 @@ class UserRepository:
         await self.session.flush()
         return user
 
+    async def set_lang(self, user_id: int, lang: str) -> Optional[User]:
+        user = await self.get_by_id(user_id)
+        if user is None:
+            return None
+        user.lang = lang
+        await self.session.flush()
+        return user
+
     async def set_active(self, user_id: int, is_active: bool) -> Optional[User]:
         user = await self.get_by_id(user_id)
         if user is None:

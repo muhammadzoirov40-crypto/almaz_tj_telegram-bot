@@ -103,6 +103,18 @@ async def ensure_schema() -> None:
     except Exception:
         logger.warning("Could not ensure products.sku column", exc_info=True)
 
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(
+                text(
+                    "ALTER TABLE users "
+                    "ADD COLUMN IF NOT EXISTS lang VARCHAR(8) "
+                    "NOT NULL DEFAULT 'ru'"
+                )
+            )
+    except Exception:
+        logger.warning("Could not ensure users.lang column", exc_info=True)
+
     factory = get_session_factory()
     async with factory() as session:
         result = await session.execute(select(Product))

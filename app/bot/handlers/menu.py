@@ -13,13 +13,9 @@ from aiogram.types import (
 from sqlalchemy import func, select
 
 from app.bot.keyboards import get_main_menu_keyboard
-from app.bot.keyboards.main import (
-    ORDERS_TEXT,
-    PROFILE_TEXT,
-    PROMO_TEXT,
-)
 from app.constants import OrderStatus, TransactionType
 from app.database.models import Order, Transaction, User
+from app.i18n import labels_for, t
 from app.services.user_service import UserService
 from app.bot.utils import safe_answer, safe_edit_text
 
@@ -81,24 +77,24 @@ def _profile_text(user: User, stats: dict | None = None) -> str:
     paid_total = topup - refunded
 
     lines = [
-        "👤 <b>Профил</b>",
+        t("profile.title"),
         "",
         f"🆔 ID: <code>{user.telegram_id}</code>",
         f"📛 Username: "
         + (f"@{user.username}" if user.username else "—"),
         "",
-        "💰 <b>Молия</b>",
-        f"Баланс: <b>{user.balance} TJS</b>",
-        f"Ҳамагӣ пур карда шуд: {paid_total:.2f} TJS",
+        t("profile.finance"),
+        t("profile.balance", balance=user.balance),
+        t("profile.topped_up", amount=f"{paid_total:.2f}"),
         "",
-        "📦 <b>Фармоишҳо</b>",
-        f"Ҳамагӣ: {stats.get('orders_total', 0)}",
-        f"Иҷро шуд: {stats.get('orders_done', 0)}",
-        f"Дар коркард: {stats.get('orders_in_work', 0)}",
+        t("profile.orders"),
+        t("profile.orders_total", count=stats.get("orders_total", 0)),
+        t("profile.orders_done", count=stats.get("orders_done", 0)),
+        t("profile.orders_work", count=stats.get("orders_in_work", 0)),
         "",
-        f"📅 Бо мо аз {user.created_at:%d.%m.%Y}",
+        t("profile.since", date=f"{user.created_at:%d.%m.%Y}"),
         "",
-        "DANAT.TJ ⚡ — Арзонтарин алмаз дар Тоҷикистон",
+        t("profile.tagline"),
     ]
     return "\n".join(lines)
 
@@ -108,12 +104,12 @@ def _profile_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=ORDERS_TEXT, callback_data="menu:orders"
+                    text=t("btn.orders"), callback_data="menu:orders"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="🔙 Назад", callback_data="back:menu"
+                    text=t("btn.back"), callback_data="back:menu"
                 )
             ],
         ]
@@ -124,7 +120,7 @@ async def _show_profile(message: Message, session, db_user=None) -> None:
     user_service = UserService(session)
     user = await user_service.get_profile(message.from_user.id)
     if user is None:
-        await message.answer("❌ Шумо ҳанӯз сабт наштаед. /start кунед.")
+        await message.answer(t("start.not_registered"))
         return
     stats = await _load_stats(user.id, session)
     await message.answer(
@@ -135,7 +131,7 @@ async def _show_profile(message: Message, session, db_user=None) -> None:
     )
 
 
-@router.message(F.text == PROFILE_TEXT)
+@router.message(F.text.in_(labels_for("btn.profile")))
 async def on_profile(message: Message, session=None, db_user=None) -> None:
     await _show_profile(message, session, db_user)
 
@@ -151,7 +147,7 @@ async def on_profile_callback(
     user_service = UserService(session)
     user = await user_service.get_profile(call.from_user.id)
     if user is None:
-        await safe_answer(call, "Шумо ҳанӯз сабт наштаед.", show_alert=True)
+        await safe_answer(call, t("start.not_registered"), show_alert=True)
         return
     stats = await _load_stats(user.id, session)
     await safe_edit_text(call.message, 
@@ -163,15 +159,9 @@ async def on_profile_callback(
     await safe_answer(call)
 
 
-@router.message(F.text == PROMO_TEXT)
+@router.message(F.text.in_(labels_for("btn.promo")))
 async def on_promo(message: Message) -> None:
-    await message.answer(
-        "🎁 <b>Пешниҳодҳо</b>\n\n"
-        "🏆 <b>Ҷоизаи моҳина:</b> ҳар моҳ номаи он корбар, ки дар мудда"
-        "ти 1 моҳ аз ҳама зиёд донат кардааст, ғолиб эълон мешавад ва "
-        "<b>туҳфа</b> мегирад!\n\n"
-        "📢 Канал: <a href=\"https://t.me/_ff_almaz_tj_\">@_ff_almaz_tj_</a>"
-    )
+    await message.answer(t("promo.body"))
 
 
 @router.callback_query(F.data == "menu:promo")
@@ -181,12 +171,8 @@ async def on_promo_callback(
     db_user=None,
 ) -> None:
     await state.clear()
-    await safe_edit_text(call.message, 
-        "🎁 <b>Пешниҳодҳо</b>\n\n"
-        "🏆 <b>Ҷоизаи моҳина:</b> ҳар моҳ номаи он корбар, ки дар мудда"
-        "ти 1 моҳ аз ҳама зиёд донат кардааст, ғолиб эълон мешавад ва "
-        "<b>туҳфа</b> мегирад!\n\n"
-        "📢 Канал: <a href=\"https://t.me/_ff_almaz_tj_\">@_ff_almaz_tj_</a>",
+    await safe_edit_text(call.message,
+        t("promo.body"),
         reply_markup=get_main_menu_keyboard(
             is_admin=db_user.is_admin if db_user else False
         ),
@@ -228,9 +214,9 @@ async def _top_buyers(session, limit: int = 10) -> list[dict]:
 
 def _buyers_text(buyers: list[dict]) -> str:
     if not buyers:
-        return "🏆 <b>Харидорҳо</b>"
+        return t("buyers.title")
 
-    lines = ["🏆 <b>Харидорҳо — Top ҳама</b>\n"]
+    lines = [t("buyers.top") + "\n"]
     for index, buyer in enumerate(buyers, start=1):
         medal = BUYERS_MEDALS.get(index, f"{index}.")
         name = (
@@ -240,7 +226,7 @@ def _buyers_text(buyers: list[dict]) -> str:
         )
         lines.append(
             f"{medal} {name} — {buyer['spent']:.2f} TJS "
-            f"({buyer['orders']} фармоиш)"
+            f"({t('buyers.orders', count=buyer['orders'])})"
         )
     return "\n".join(lines)
 
@@ -254,7 +240,7 @@ async def on_buyers_callback(
 ) -> None:
     await state.clear()
     if session is None:
-        await safe_answer(call, "Хатогӣ.", show_alert=True)
+        await safe_answer(call, t("error.generic"), show_alert=True)
         return
     buyers = await _top_buyers(session)
     await safe_edit_text(

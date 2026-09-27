@@ -10,6 +10,7 @@ from app.bot.keyboards.admin import (
 from app.bot.keyboards.main import (
     ADMIN_TEXT,
     SUBSCRIBE_CALLBACK,
+    get_language_keyboard,
     get_main_menu_keyboard,
     get_remove_keyboard,
     get_subscribe_keyboard,
@@ -43,6 +44,7 @@ __all__ = [
     "get_main_menu_keyboard",
     "get_remove_keyboard",
     "get_subscribe_keyboard",
+    "get_language_keyboard",
     "SUBSCRIBE_CALLBACK",
     "ADMIN_TEXT",
     "get_products_keyboard",

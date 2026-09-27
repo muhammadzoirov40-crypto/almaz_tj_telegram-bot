@@ -7,6 +7,7 @@ from aiogram.types import TelegramObject, User as TgUser
 
 from app.config import settings
 from app.database.repositories import UserRepository
+from app.i18n import set_lang
 
 
 class UserMiddleware(BaseMiddleware):
@@ -35,6 +36,7 @@ class UserMiddleware(BaseMiddleware):
                 user.is_admin = True
                 await session.flush()
             data["db_user"] = user
+            set_lang(getattr(user, "lang", None))
 
             if not user.is_active and not user.is_admin:
                 return None

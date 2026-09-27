@@ -11,10 +11,10 @@ from app.bot.keyboards import (
     get_main_menu_keyboard,
     get_orders_keyboard,
 )
-from app.bot.keyboards.main import ORDERS_TEXT
 from app.config import settings
 from app.constants import OrderStatus
 from app.database.models import Order, User
+from app.i18n import labels_for, t
 from app.services import review_channel
 from app.services.order_service import OrderService
 from app.utils.logger import get_logger
@@ -31,24 +31,25 @@ STATUS_ICONS: dict[str, str] = {
     OrderStatus.CANCELLED: "🚫",
 }
 
-STATUS_LABELS: dict[str, str] = {
-    OrderStatus.PENDING: "Дар интизори қабул",
-    OrderStatus.PAID: "Пардохт шуд",
-    OrderStatus.PROCESSING: "Дар кор",
-    OrderStatus.COMPLETED: "Тайёр",
-    OrderStatus.FAILED: "Ноком",
-    OrderStatus.CANCELLED: "Бекор",
+STATUS_LABEL_KEYS: dict[str, str] = {
+    OrderStatus.PENDING: "status.pending",
+    OrderStatus.PAID: "status.paid",
+    OrderStatus.PROCESSING: "status.processing",
+    OrderStatus.COMPLETED: "status.completed",
+    OrderStatus.FAILED: "status.failed",
+    OrderStatus.CANCELLED: "status.cancelled",
 }
 
 
 def format_orders(orders: list[Order]) -> str:
     if not orders:
-        return "📦 Шумо ҳанӯз фармоишҳо надоред."
+        return t("orders.empty")
 
-    lines = ["📦 <b>Фармоишҳои ман</b> — DANAT.TJ ⚡\n"]
+    lines = [t("orders.title")]
     for order in orders:
         icon = STATUS_ICONS.get(order.status, "ℹ️")
-        status_label = STATUS_LABELS.get(order.status, order.status)
+        label_key = STATUS_LABEL_KEYS.get(order.status)
+        status_label = t(label_key) if label_key else order.status
         product_name = (
             format_product_button(order.product)
             if order.product
@@ -56,7 +57,7 @@ def format_orders(orders: list[Order]) -> str:
         )
         lines.append(
             f"{icon} №{order.id} · {product_name}\n"
-            f"   UID: <code>{order.free_fire_uid}</code> · "
+            f"   {t('orders.uid')}: <code>{order.free_fire_uid}</code> · "
             f"{order.created_at:%Y-%m-%d %H:%M} · {status_label}"
         )
     return "\n".join(lines)
@@ -64,7 +65,7 @@ def format_orders(orders: list[Order]) -> str:
 
 async def _send_orders(message: Message, session, db_user: User | None) -> None:
     if db_user is None:
-        await message.answer("❌ Шумо ҳанӯз сабт наштаед. /start кунед.")
+        await message.answer(t("start.not_registered"))
         return
 
     order_service = OrderService(session)
@@ -76,7 +77,7 @@ async def _send_orders(message: Message, session, db_user: User | None) -> None:
 
 
 @router.message(Command("orders"))
-@router.message(F.text == ORDERS_TEXT)
+@router.message(F.text.in_(labels_for("btn.orders")))
 async def on_orders_message(
     message: Message,
     session=None,
@@ -94,7 +95,7 @@ async def on_orders_callback(
 ) -> None:
     await state.clear()
     if db_user is None:
-        await safe_answer(call, "Шумо ҳанӯз сабт наштаед.", show_alert=True)
+        await safe_answer(call, t("alert.not_registered"), show_alert=True)
         return
 
     order_service = OrderService(session)
@@ -113,7 +114,7 @@ async def on_orders_refresh(
     db_user: User | None = None,
 ) -> None:
     if db_user is None:
-        await safe_answer(call, "Шумо ҳанӯз сабт наштаед.", show_alert=True)
+        await safe_answer(call, t("alert.not_registered"), show_alert=True)
         return
 
     order_service = OrderService(session)
@@ -123,7 +124,7 @@ async def on_orders_refresh(
         await safe_edit_text(call.message, text, reply_markup=get_orders_keyboard())
     except Exception:
         await call.message.answer(text, reply_markup=get_orders_keyboard())
-    await safe_answer(call, "Навсозӣ шуд")
+    await safe_answer(call, t("orders.refreshed"))
 
 
 @router.callback_query(F.data == "back:menu")
@@ -138,12 +139,12 @@ async def on_back_menu(
     try:
         await safe_edit_text(
             call.message,
-            "🏠 <b>Менюи DANAT.TJ</b>",
+            t("menu.title"),
             reply_markup=get_main_menu_keyboard(is_admin=is_admin),
         )
     except Exception:
         await call.message.answer(
-            "🏠 <b>Менюи DANAT.TJ</b>",
+            t("menu.title"),
             reply_markup=get_main_menu_keyboard(is_admin=is_admin),
         )
 
@@ -159,7 +160,7 @@ async def on_review_send(call: CallbackQuery) -> None:
     if channel is None:
         await safe_answer(
             call,
-            "Канал ҳанӯз мосланмаган. Ботни каналга админ қўшинг.",
+            t("review.no_channel"),
             show_alert=True,
         )
         return
@@ -174,13 +175,13 @@ async def on_review_send(call: CallbackQuery) -> None:
         )
         await safe_answer(
             call,
-            "Юбориб бўлмади. Каналга бот қўшилганлигини текширинг.",
+            t("review.failed"),
             show_alert=True,
         )
         return
 
     await safe_answer(
-        call, "Раҳмат! Баҳо каналга юборилди ⭐", show_alert=True
+        call, t("review.sent"), show_alert=True
     )
     logger.info(
         "Review forwarded user_id=%s order_msg_id=%s channel=%s",

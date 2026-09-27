@@ -2,10 +2,17 @@ from __future__ import annotations
 
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
-from aiogram.types import ChatMemberUpdated, Message
+from aiogram.types import CallbackQuery, ChatMemberUpdated, Message
 
-from app.bot.keyboards import get_main_menu_keyboard, get_subscribe_keyboard
+from app.bot.keyboards import (
+    get_language_keyboard,
+    get_main_menu_keyboard,
+    get_subscribe_keyboard,
+)
+from app.bot.keyboards.main import LANGUAGE_CALLBACK, SUBSCRIBE_CALLBACK
 from app.bot.utils import safe_answer, safe_edit_text
+from app.database.repositories import UserRepository
+from app.i18n import LANGS, labels_for, set_lang, t
 from app.services.subscribe_service import is_subscribed
 from app.services.user_service import UserService
 from app.utils.logger import get_logger
@@ -14,30 +21,13 @@ logger = get_logger(__name__)
 
 router = Router(name="start")
 
-START_TEXT = (
-    "Салом, хуш омадед ба боти DANAT.TJ 🏆\n\n"
-    "Арзонтарин алмаз дар Тоҷикистон\n"
-    "Free Fire • PUBG • Mobile Legends\n"
-    "ва дигар бозиҳо\n"
-    "1-5 дақиқа • 100% беҳтар\n\n"
-)
-
-START_FOOTER = "Лутфан аз менюи зерин интихоб кунед:"
-
-SUBSCRIBE_TEXT = (
-    "👋 Пеш аз оғоз ба канал мо обуна шавед!\n\n"
-    "1️⃣ Каналро кушоед ва тугмаи «Подписаться»-ро пахш кунед\n"
-    "2️⃣ Баъд тугмаи «✅ Проверить»-ро пахш кунед\n\n"
-    "Обуна шудед → менюи бот кушода мешавад."
-)
-
 
 def _user_block(user) -> str:
     name = user.first_name or user.username or "—"
     return (
-        f"👤 Ном: <b>{name}</b>\n"
+        f"👤 {t('user.name')}: <b>{name}</b>\n"
         f"🆔 ID: <code>{user.telegram_id}</code>\n"
-        f"💰 Баланс: <b>{user.balance} TJS</b>\n\n"
+        f"💰 {t('user.balance')}: <b>{user.balance} TJS</b>\n\n"
     )
 
 
@@ -60,17 +50,17 @@ async def cmd_start(
     bot = message.bot
     if bot is not None and not await is_subscribed(bot, user.telegram_id):
         await message.answer(
-            SUBSCRIBE_TEXT, reply_markup=get_subscribe_keyboard()
+            t("sub.text"), reply_markup=get_subscribe_keyboard()
         )
         return
 
     await message.answer(
-        START_TEXT + _user_block(user) + START_FOOTER,
+        t("start.hello") + _user_block(user) + t("start.footer"),
         reply_markup=get_main_menu_keyboard(is_admin=user.is_admin),
     )
 
 
-@router.callback_query(F.data == "sub:check")
+@router.callback_query(F.data == SUBSCRIBE_CALLBACK)
 async def on_subscribe_check(
     call: CallbackQuery,
     db_user=None,  # injected by UserMiddleware
@@ -78,11 +68,7 @@ async def on_subscribe_check(
 ) -> None:
     bot = call.bot
     if bot is not None and not await is_subscribed(bot, call.from_user.id):
-        await safe_answer(
-            call,
-            "Шумо ҳанӯз обуна нестед. Каналро обуна шавед.",
-            show_alert=True,
-        )
+        await safe_answer(call, t("sub.not_joined"), show_alert=True)
         return
 
     user = db_user
@@ -94,8 +80,10 @@ async def on_subscribe_check(
             is_admin=False,
         )
 
-    await safe_answer(call, "Обуна тасдиқ шуд!")
-    text = START_TEXT + (_user_block(user) if user else "") + START_FOOTER
+    await safe_answer(call, t("sub.ok"))
+    text = t("start.hello") + (_user_block(user) if user else "") + t(
+        "start.footer"
+    )
     markup = get_main_menu_keyboard(
         is_admin=user.is_admin if user else False
     )
@@ -104,11 +92,51 @@ async def on_subscribe_check(
         await call.message.answer(text, reply_markup=markup)
 
 
+@router.callback_query(F.data == LANGUAGE_CALLBACK)
+async def on_language_menu(
+    call: CallbackQuery,
+    state,
+    db_user=None,
+) -> None:
+    await state.clear()
+    await safe_edit_text(
+        call.message, t("lang.choose"), reply_markup=get_language_keyboard()
+    )
+    await safe_answer(call)
+
+
+@router.callback_query(F.data.startswith("lang:set:"))
+async def on_language_set(
+    call: CallbackQuery,
+    state,
+    db_user=None,
+    session=None,
+) -> None:
+    code = (call.data or "").removeprefix("lang:set:")
+    if code not in LANGS:
+        await safe_answer(call, "Нодуруст. / Nodurust.", show_alert=True)
+        return
+
+    set_lang(code)
+    if db_user is not None and session is not None:
+        await UserRepository(session).set_lang(db_user.id, code)
+
+    is_admin = db_user.is_admin if db_user else False
+    await safe_answer(call, t("lang.changed"))
+    await safe_edit_text(
+        call.message,
+        t("start.hello") + (_user_block(db_user) if db_user else "") + t(
+            "start.footer"
+        ),
+        reply_markup=get_main_menu_keyboard(is_admin=is_admin),
+    )
+
+
 @router.message(Command("menu"))
-@router.message(F.text == "🏠 Асосӣ")
+@router.message(F.text.in_(labels_for("btn.menu")))
 async def cmd_menu(message: Message, db_user=None) -> None:
     is_admin = db_user.is_admin if db_user else False
-    text = "🏠 <b>Менюи DANAT.TJ</b>\n\n"
+    text = f"{t('menu.title')}\n\n"
     if db_user:
         text = text + _user_block(db_user)
     await message.answer(
