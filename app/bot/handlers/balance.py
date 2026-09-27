@@ -127,7 +127,7 @@ async def on_amount_choice(call: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(BalanceTopUpStates.confirming)
     await safe_edit_text(
         call.message,
-        f"💰 Маблағ: <b>{amount} TJS</b>\n\nУсули пардохтро интихоб кунед:",
+        f"💰 Маблағ: <b>{amount} TJS</b>\n\nПардохт <b>Dushanbe City</b> орқали:",
         reply_markup=get_payment_method_keyboard(),
     )
     await safe_answer(call)
@@ -148,7 +148,7 @@ async def process_custom_amount(message: Message, state: FSMContext) -> None:
     await state.update_data(amount=str(amount))
     await state.set_state(BalanceTopUpStates.confirming)
     await message.answer(
-        f"💰 Маблағ: <b>{amount} TJS</b>\n\nУсули пардохтро интихоб кунед:",
+        f"💰 Маблағ: <b>{amount} TJS</b>\n\nПардохт <b>Dushanbe City</b> орқали:",
         reply_markup=get_payment_method_keyboard(),
     )
 
@@ -403,7 +403,7 @@ async def on_balance_confirm(
 ) -> None:
     data = await state.get_data()
     amount_raw = data.get("amount")
-    method = data.get("method") or BalanceTopUpMethod.ALIF.value
+    method = data.get("method") or BalanceTopUpMethod.DS.value
     phone = data.get("phone")
 
     if not amount_raw:

@@ -81,11 +81,6 @@ def get_payment_method_keyboard() -> InlineKeyboardMarkup:
                     text="🏙 Dushanbe City", callback_data="paymethod:ds"
                 )
             ],
-            [
-                InlineKeyboardButton(
-                    text="💳 Alif", callback_data="paymethod:alif"
-                )
-            ],
             [InlineKeyboardButton(text="🔙 Бозгашт", callback_data="balance:topup")],
         ]
     )
