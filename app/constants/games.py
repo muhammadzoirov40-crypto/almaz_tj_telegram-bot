@@ -64,13 +64,13 @@ GAMES: tuple[Game, ...] = (
     ),
     Game(
         key="mlbb_ru",
-        label="Mobile Legends: Bang Bang (регион Russia)",
+        label="Mobile Legends: Bang Bang (RU)",
         emoji="🇷🇺",
         product_prefixes=("MLBB RU ",),
     ),
     Game(
         key="mlbb_cis",
-        label="Mobile Legends: Bang Bang (Кыргызстан, Беларусь)",
+        label="Mobile Legends: Bang Bang (CIS)",
         emoji="🌏",
         product_prefixes=("MLBB CIS ",),
     ),

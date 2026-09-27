@@ -10,17 +10,6 @@ from aiogram.types import (
 from app.config import settings
 from app.i18n import t
 
-# Kept for legacy `F.text ==` filters; live buttons use t("btn.*").
-MAIN_MENU_TEXT = "🏠 Асосӣ"
-ORDERS_TEXT = "📦 Фармоишҳои ман"
-PROFILE_TEXT = "👤 Саҳифаи ман"
-BALANCE_TEXT = "💰 Баланс"
-PROMO_TEXT = "🎁 Пешниҳодҳо"
-SUPPORT_TEXT = "📞 Дастгирӣ ба админ"
-TOPUP_TEXT = "💎 Донат"
-ADMIN_TEXT = "🛠 Админ"
-CHANNEL_TEXT = "📢 Канал"
-
 SUBSCRIBE_CALLBACK = "sub:check"
 LANGUAGE_CALLBACK = "lang:show"
 

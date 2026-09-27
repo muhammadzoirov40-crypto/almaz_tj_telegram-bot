@@ -6,6 +6,7 @@ import httpx
 
 from app.config import settings
 from app.constants.games import GAME_LABELS as _GAME_LABELS
+from app.i18n import t
 from app.providers.base import AccountInfo, TopUpProvider, TopUpResult
 from app.providers.fireloot import FireLootClient, FireLootError
 from app.utils.logger import get_logger
@@ -31,7 +32,7 @@ class MockTopUpProvider(TopUpProvider):
                 found=False,
                 game=game,
                 uid=uid,
-                message="UID нодуруст аст.",
+                message=t("prov.uid_invalid"),
             )
         nickname = ""
         logger.info(
@@ -44,7 +45,7 @@ class MockTopUpProvider(TopUpProvider):
             nickname=nickname,
             game=label,
             uid=uid,
-            message="Санҷиши ном дар ҳолати test кушода нест.",
+            message=t("prov.mock_name_disabled"),
         )
 
     async def topup(
@@ -253,17 +254,14 @@ class RealTopUpProvider(TopUpProvider):
                         found=False,
                         game=label,
                         uid=uid,
-                        message="ID ёфт нашуд.",
+                        message=t("prov.id_not_found"),
                     )
                 if code == "region_unsupported":
                     return AccountInfo(
                         found=False,
                         game=label,
                         uid=uid,
-                        message=(
-                            "Ин ҳисоб аз минтақаи дигар аст ва барои ин "
-                            "маҳсулот мувофиқ нест."
-                        ),
+                        message=t("prov.region_mismatch"),
                     )
                 # product_not_found / product_unavailable → try next SKU
                 logger.info(
@@ -322,7 +320,7 @@ class RealTopUpProvider(TopUpProvider):
                             message=str(
                                 data.get("error")
                                 or data.get("message")
-                                or "ID ёфт нашуд."
+                                or t("prov.id_not_found")
                             ),
                         )
                     if nickname:
@@ -387,7 +385,7 @@ class RealTopUpProvider(TopUpProvider):
             nickname="",
             game=label,
             uid=uid,
-            message="Ном санҷида нашуд. Бе санҷиш ID-ро идома диҳед.",
+            message=t("prov.name_not_checked"),
         )
 
     async def lookup_account(self, uid: str, game: str = "ff") -> AccountInfo:
@@ -397,7 +395,7 @@ class RealTopUpProvider(TopUpProvider):
                 found=False,
                 game=game,
                 uid=uid,
-                message="UID нодуруст аст.",
+                message=t("prov.uid_invalid"),
             )
 
         if game == "ff":
@@ -417,7 +415,7 @@ class RealTopUpProvider(TopUpProvider):
                 nickname="",
                 game=label,
                 uid=uid,
-                message="Ном санҷида нашуд. Бе санҷиш ID-ро идома диҳед.",
+                message=t("prov.name_not_checked"),
             )
 
         try:
@@ -448,13 +446,13 @@ class RealTopUpProvider(TopUpProvider):
                     nickname="",
                     game=label,
                     uid=uid,
-                    message="Ном санҷида нашуд. Бе санҷиш ID-ро идома диҳед.",
+                    message=t("prov.name_not_checked"),
                 )
             return AccountInfo(
                 found=False,
                 game=label,
                 uid=uid,
-                message=f"Хатогии API ({status}).",
+                message=t("prov.api_error", status=status),
             )
         except httpx.HTTPError as exc:
             logger.exception("Real lookup failed uid=%s game=%s", uid, game)
@@ -463,9 +461,7 @@ class RealTopUpProvider(TopUpProvider):
                 nickname="",
                 game=label,
                 uid=uid,
-                message=(
-                    "Хатогии пайвастшавӣ. Бе санҷиш ID-ро идома диҳед."
-                ),
+                message=t("prov.conn_error"),
             )
 
         if not isinstance(data, dict):
@@ -474,7 +470,7 @@ class RealTopUpProvider(TopUpProvider):
                 nickname="",
                 game=label,
                 uid=uid,
-                message="API ҷавоби нодуруст дод. Бе санҷиш ID-ро идома диҳед.",
+                message=t("prov.bad_response"),
             )
 
         exists = data.get("exists", data.get("found", True))
@@ -485,7 +481,9 @@ class RealTopUpProvider(TopUpProvider):
             display_game = f"{label} ({region})"
 
         if exists is False:
-            err = str(data.get("error") or data.get("message") or "ID ёфт нашуд.")
+            err = str(
+                data.get("error") or data.get("message") or t("prov.id_not_found")
+            )
             return AccountInfo(
                 found=False,
                 game=display_game,
@@ -499,7 +497,7 @@ class RealTopUpProvider(TopUpProvider):
                 nickname="",
                 game=display_game,
                 uid=uid,
-                message="Лақаб ёфт нашуд. Бе санҷиш ID-ро идома диҳед.",
+                message=t("prov.nickname_not_found"),
             )
 
         logger.info(
@@ -524,19 +522,19 @@ class RealTopUpProvider(TopUpProvider):
             return base[: -len("/lookup")] + "/topup"
         return f"{base}/topup"
 
-    _FIRELOOT_ERRORS: dict[str, str] = {
-        "invalid_uid": "ID нодуруст аст.",
-        "zone_required": "Барои ин маҳсулот соҳаи zone лозим аст.",
-        "invalid_zone": "Zone нодуруст аст.",
-        "invalid_request": "Дархост нодуруст.",
-        "unauthorized": "Калиди FireLoot нодуруст.",
-        "insufficient_balance": "Баланс дар FireLoot кофӣ нест.",
-        "product_not_found": "Маҳсулот (SKU) ёфт нашуд.",
-        "product_unavailable": "Ин номинал ҳоло фурӯда нест.",
-        "region_unsupported": "Ин ҳисоб аз минтақаи дигар аст.",
-        "rate_limited": "Дархостҳо зиёданд, дубора кӯшиш кунед.",
-        "service_unavailable": "Хизматрасонӣ муваққатан дастрас нест.",
-        "network": "Хатогии пайвастшавӣ.",
+    _FIRELOOT_ERROR_KEYS: dict[str, str] = {
+        "invalid_uid": "prov.fl.invalid_uid",
+        "zone_required": "prov.fl.zone_required",
+        "invalid_zone": "prov.fl.invalid_zone",
+        "invalid_request": "prov.fl.invalid_request",
+        "unauthorized": "prov.fl.unauthorized",
+        "insufficient_balance": "prov.fl.insufficient_balance",
+        "product_not_found": "prov.fl.product_not_found",
+        "product_unavailable": "prov.fl.product_unavailable",
+        "region_unsupported": "prov.fl.region_unsupported",
+        "rate_limited": "prov.fl.rate_limited",
+        "service_unavailable": "prov.fl.service_unavailable",
+        "network": "prov.fl.network",
     }
 
     async def _fireloot_order(
@@ -558,8 +556,10 @@ class RealTopUpProvider(TopUpProvider):
             return TopUpResult(
                 success=False,
                 provider_reference=reference,
-                message=self._FIRELOOT_ERRORS.get(
-                    exc.code, f"FireLoot xatosi: {exc.code}"
+                message=(
+                    t(self._FIRELOOT_ERROR_KEYS[exc.code])
+                    if exc.code in self._FIRELOOT_ERROR_KEYS
+                    else t("prov.fl_error", code=exc.code)
                 ),
             )
 
@@ -580,20 +580,20 @@ class RealTopUpProvider(TopUpProvider):
                 success=True,
                 pending=status == "processing",
                 provider_reference=remote_ref,
-                message="FireLoot: Фармоиш қабул шуд.",
+                message=t("prov.fl_accepted"),
                 raw=data,
             )
         if status in {"failed", "refunded"}:
             return TopUpResult(
                 success=False,
                 provider_reference=remote_ref,
-                message="FireLoot: Фармоиш иҷро нашуд.",
+                message=t("prov.fl_failed"),
                 raw=data,
             )
         return TopUpResult(
             success=False,
             provider_reference=remote_ref,
-            message=f"FireLoot: номаълум ҳолат ({status or '—'})",
+            message=t("prov.fl_unknown", status=status or "—"),
             raw=data,
         )
 
@@ -614,10 +614,7 @@ class RealTopUpProvider(TopUpProvider):
             return TopUpResult(
                 success=False,
                 provider_reference=reference,
-                message=(
-                    "Калиди API ворид нашудааст (FIRELOOT_API_KEY "
-                    "ё FREE_FIRE_API_KEY)."
-                ),
+                message=t("prov.no_api_key"),
             )
         payload = {
             "player_id": uid,
@@ -643,21 +640,23 @@ class RealTopUpProvider(TopUpProvider):
             return TopUpResult(
                 success=False,
                 provider_reference=reference,
-                message=f"API xatosi ({exc.response.status_code})",
+                message=t("prov.api_status", status=exc.response.status_code),
             )
         except httpx.HTTPError as exc:
             logger.exception("Real top-up failed order_id=%s", order_id)
             return TopUpResult(
                 success=False,
                 provider_reference=reference,
-                message=f"Хатогии пайвастшавӣ: {exc.__class__.__name__}",
+                message=t(
+                    "prov.conn_error_name", name=exc.__class__.__name__
+                ),
             )
 
         if not isinstance(data, dict):
             return TopUpResult(
                 success=False,
                 provider_reference=reference,
-                message="API ҷавоби нодуруст дод",
+                message=t("prov.bad_response_short"),
             )
 
         success = bool(

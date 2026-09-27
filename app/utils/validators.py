@@ -4,6 +4,8 @@ import re
 from decimal import Decimal, InvalidOperation
 from typing import Optional
 
+from app.i18n import t
+
 # Free Fire numeric UID: typically 8-12 digits. We never ask for a password.
 UID_PATTERN = re.compile(r"^\d{8,12}$")
 USERNAME_PATTERN = re.compile(r"^[a-zA-Z0-9_]{5,32}$")
@@ -26,11 +28,11 @@ def normalize_uid(value: str) -> str:
 def validate_uid(value: str) -> tuple[bool, Optional[str]]:
     uid = normalize_uid(value)
     if not uid:
-        return False, "UID холӣ аст."
+        return False, t("val.uid_empty")
     if not uid.isdigit():
-        return False, "UID бояд танҳо рақам бошад."
+        return False, t("val.uid_digits")
     if not is_valid_uid(uid):
-        return False, "UID бояд аз 8 то 12 рақам бошад."
+        return False, t("val.uid_len")
     return True, None
 
 
@@ -41,19 +43,19 @@ def is_valid_username(value: str) -> bool:
 def validate_topup_amount(value: str) -> tuple[bool, Optional[str], Optional[Decimal]]:
     raw = (value or "").strip().replace(",", ".")
     if not raw:
-        return False, "Маблағ холӣ аст.", None
+        return False, t("val.amount_empty"), None
     try:
         amount = Decimal(raw)
     except (InvalidOperation, ValueError):
-        return False, "Маблағ бояд рақам бошад.", None
+        return False, t("val.amount_digits"), None
     if amount != amount.to_integral_value() and amount.as_tuple().exponent < -2:
-        return False, "Ҳадди аққал ду рақами касрӣ.", None
+        return False, t("val.amount_decimals"), None
     if amount <= 0:
-        return False, "Маблағ бояд аз нол зиёд бошад.", None
+        return False, t("val.amount_positive"), None
     if amount < TOPUP_MIN_AMOUNT:
-        return False, f"Ҳадди аққал {TOPUP_MIN_AMOUNT} TJS.", None
+        return False, t("val.amount_min", min=TOPUP_MIN_AMOUNT), None
     if amount > TOPUP_MAX_AMOUNT:
-        return False, f"Ҳадди аксар {TOPUP_MAX_AMOUNT} TJS.", None
+        return False, t("val.amount_max", max=TOPUP_MAX_AMOUNT), None
     return True, None, amount.quantize(Decimal("0.01"))
 
 
@@ -88,7 +90,7 @@ def normalize_phone(value: str) -> str:
 def validate_phone(value: str) -> tuple[bool, Optional[str], Optional[str]]:
     raw = (value or "").strip()
     if not raw:
-        return False, "Рақами телефон холӣ аст.", None
+        return False, t("val.phone_empty"), None
 
     cleaned = (
         raw.replace(" ", "")
@@ -99,10 +101,5 @@ def validate_phone(value: str) -> tuple[bool, Optional[str], Optional[str]]:
     )
     national = _phone_national(cleaned)
     if not national:
-        return (
-            False,
-            "Рақами Тоҷикистон нависед "
-            "(масалан: +992002119831 ё 002119831).",
-            None,
-        )
+        return False, t("val.phone_invalid"), None
     return True, None, f"+992{national}"

@@ -24,6 +24,7 @@ from app.database.database import (
     session_scope,
 )
 from app.database.models import Order, Product
+from app.i18n import set_lang, t
 from app.services.notification_service import notification_service
 from app.utils.logger import configure_logging, get_logger
 
@@ -242,12 +243,15 @@ async def _poll_fireloot_orders(bot: Bot) -> None:
                             order.id,
                         )
                         if user is not None:
+                            set_lang(user.lang)
                             await notification_service.safe_send(
                                 user.telegram_id,
-                                f"✅ <b>Фармоиши №{order.id} иҷро шуд!</b>\n\n"
-                                f"🎮 {product_name}\n"
-                                f"🆔 UID: <code>{order.free_fire_uid}</code>\n\n"
-                                "Донат ба ҳисоби шумо ворид шуд.",
+                                t(
+                                    "notif.done",
+                                    id=order.id,
+                                    product=product_name,
+                                    uid=order.free_fire_uid,
+                                ),
                             )
                     elif status in {"failed", "refunded"}:
                         refunded = await _refund_order(session, order, status)
@@ -263,18 +267,25 @@ async def _poll_fireloot_orders(bot: Bot) -> None:
                             refunded,
                         )
                         if user is not None:
+                            set_lang(user.lang)
                             note = (
-                                f"\n💰 Маблағ ({order.amount} {order.currency}) "
-                                "ба баланси шумо барқарор шуд."
+                                t(
+                                    "notif.refunded",
+                                    amount=order.amount,
+                                    currency=order.currency,
+                                )
                                 if refunded
                                 else ""
                             )
                             await notification_service.safe_send(
                                 user.telegram_id,
-                                f"❌ <b>Фармоиши №{order.id} ноком шуд</b>\n\n"
-                                f"🎮 {product_name}\n"
-                                f"🆔 UID: <code>{order.free_fire_uid}</code>"
-                                f"{note}",
+                                t(
+                                    "notif.failed",
+                                    id=order.id,
+                                    product=product_name,
+                                    uid=order.free_fire_uid,
+                                    note=note,
+                                ),
                             )
         except asyncio.CancelledError:
             raise

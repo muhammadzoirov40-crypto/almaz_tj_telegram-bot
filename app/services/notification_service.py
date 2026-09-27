@@ -7,6 +7,7 @@ from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.types import InlineKeyboardMarkup, InputFile, Message
 
 from app.config import settings
+from app.i18n import t
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -101,19 +102,20 @@ class NotificationService:
             "FAILED": "❌",
             "CANCELLED": "🚫",
         }
-        status_labels = {
-            "PENDING": "Дар интизори қабул",
-            "PAID": "Пардохт шуд",
-            "PROCESSING": "Дар кор",
-            "COMPLETED": "Тайёр",
-            "FAILED": "Ноком",
-            "CANCELLED": "Бекор",
+        status_keys = {
+            "PENDING": "status.pending",
+            "PAID": "status.paid",
+            "PROCESSING": "status.processing",
+            "COMPLETED": "status.completed",
+            "FAILED": "status.failed",
+            "CANCELLED": "status.cancelled",
         }
         icon = icons.get(status, "ℹ️")
-        label = status_labels.get(status, status)
+        key = status_keys.get(status)
+        label = t(key) if key else status
         lines = [
-            f"{icon} Фармоиши №{order_id}",
-            f"Ҳолат: {label}",
+            t("notif.order_line", icon=icon, id=order_id),
+            t("notif.status_line", status=label),
         ]
         if detail:
             lines.append(detail)

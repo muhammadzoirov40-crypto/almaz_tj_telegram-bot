@@ -114,7 +114,7 @@ async def on_language_set(
 ) -> None:
     code = (call.data or "").removeprefix("lang:set:")
     if code not in LANGS:
-        await safe_answer(call, "Нодуруст. / Nodurust.", show_alert=True)
+        await safe_answer(call, t("lang.invalid"), show_alert=True)
         return
 
     set_lang(code)

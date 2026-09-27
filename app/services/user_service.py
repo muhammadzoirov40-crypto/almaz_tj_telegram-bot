@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.constants import TransactionType
 from app.database.models import Product, User
 from app.database.repositories import TransactionRepository, UserRepository
+from app.i18n import t
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -47,10 +48,10 @@ class UserService:
         reference_id: Optional[str] = None,
     ) -> User:
         if amount <= 0:
-            raise ValueError("Маблағ бояд мусбӣ бошад.")
+            raise ValueError(t("svc.amount_positive"))
         user = await self.users.get_by_id(user_id)
         if user is None:
-            raise ValueError("Корбар ёфт нашуд.")
+            raise ValueError(t("svc.user_not_found"))
         new_balance = user.balance + amount
         user = await self.users.update_balance(user_id, new_balance)
         await self.transactions.create(
@@ -71,14 +72,17 @@ class UserService:
         reference_id: Optional[str] = None,
     ) -> User:
         if amount <= 0:
-            raise ValueError("Маблағ бояд мусбӣ бошад.")
+            raise ValueError(t("svc.amount_positive"))
         user = await self.users.get_by_id(user_id)
         if user is None:
-            raise ValueError("Корбар ёфт нашуд.")
+            raise ValueError(t("svc.user_not_found"))
         if user.balance < amount:
             raise ValueError(
-                "Баланс кофӣ нест: "
-                f"{user.balance} TJS < {amount} TJS"
+                t(
+                    "svc.insufficient_balance",
+                    balance=user.balance,
+                    amount=amount,
+                )
             )
         user = await self.users.update_balance(
             user_id, user.balance - amount

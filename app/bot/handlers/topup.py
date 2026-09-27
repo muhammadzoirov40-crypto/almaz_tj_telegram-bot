@@ -19,8 +19,6 @@ from app.bot.keyboards import (
     get_products_keyboard,
     get_uid_request_keyboard,
 )
-from app.bot.keyboards.main import TOPUP_TEXT
-from app.bot.keyboards.topup import CANCEL_TEXT
 from app.bot.states import TopUpStates
 from app.bot.utils import safe_answer, safe_edit_text
 from app.constants import OrderStatus
@@ -31,6 +29,7 @@ from app.constants.games import (
     match_products,
 )
 from app.database.models import Order, User
+from app.i18n import labels_for, t
 from app.providers import get_topup_provider
 from app.services.notification_service import notification_service
 from app.services.order_service import OrderError, OrderService
@@ -43,9 +42,14 @@ logger = get_logger(__name__)
 router = Router(name="topup")
 
 FF_CATEGORIES = {
-    "diamonds": "💎 Алмазҳо",
-    "vouchers": "🎟️ Ваучер / Гузарнома",
+    "diamonds": "diamonds",
+    "vouchers": "vouchers",
 }
+
+
+def _ff_category_label(category: str) -> str:
+    key = "btn.diamonds" if category == "diamonds" else "btn.vouchers"
+    return t(key)
 
 
 def _ff_category(name: str) -> str:
@@ -54,17 +58,15 @@ def _ff_category(name: str) -> str:
         return "diamonds"
     return "vouchers"
 
-GAME_PROMPT = (
-    "💎 <b>DANAT.TJ — Донат</b>\n\n"
-    "Бозиро интихоб кунед:"
-)
-
-UID_PROMPT = (
-    "🎮 <b>{game_label} — ID бозигар</b>\n\n"
-    "Лутфан ID (UID) бозигарро ворид кунед.\n"
-    "UID одатан 8–12 рақам аст.\n\n"
-    "⚠️ Паролро ҳаргиз напурсед ва нависед!"
-)
+def _game_prompt(db_user: User | None) -> str:
+    """Game selection screen, with the user's balance when known."""
+    base = t("top.game_prompt")
+    if db_user is None:
+        return base
+    return (
+        f"{base}\n\n"
+        + t("top.balance_line", balance=_fmt_money(db_user.balance))
+    )
 
 
 def _parse_callback_id(data: str, prefix: str) -> int | None:
@@ -85,16 +87,6 @@ def _fmt_money(value: Decimal | str | float) -> str:
     return str(Decimal(str(value)).quantize(Decimal("0.01")))
 
 
-def _game_prompt(db_user: User | None) -> str:
-    """Game selection screen, with the user's balance when known."""
-    if db_user is None:
-        return GAME_PROMPT
-    return (
-        f"{GAME_PROMPT}\n\n"
-        f"💳 Хисоби шумо: {_fmt_money(db_user.balance)} с."
-    )
-
-
 async def _products_prompt(
     session: AsyncSession,
     game: str,
@@ -111,18 +103,19 @@ async def _products_prompt(
 
     game_label = _catalog_game_label(game)
     balance = _fmt_money(db_user.balance) if db_user else "0.00"
-    cat_label = FF_CATEGORIES.get(category or "", "")
+    cat_label = _ff_category_label(category) if category else ""
     title = f"{game_label} — {cat_label}" if cat_label else game_label
     text = (
         f"🔥 <b>{title}</b>\n\n"
-        "Маҳсулотро интихоб кунед.\n"
-        f"💳 Хисоби шумо: {balance} с."
+        + t("top.pick_product")
+        + "\n"
+        + t("top.balance_line", balance=balance)
     )
     return text, products, cat_label
 
 
 @router.message(Command("topup"))
-@router.message(F.text == TOPUP_TEXT)
+@router.message(F.text.in_(labels_for("btn.donate")))
 async def cmd_topup(
     message: Message,
     state: FSMContext,
@@ -148,11 +141,11 @@ async def on_topup_callback(
     await safe_answer(call)
 
 
-@router.message(TopUpStates.choosing_game, F.text == CANCEL_TEXT)
-@router.message(TopUpStates.choosing_product, F.text == CANCEL_TEXT)
-@router.message(TopUpStates.waiting_uid, F.text == CANCEL_TEXT)
-@router.message(TopUpStates.confirming_account, F.text == CANCEL_TEXT)
-@router.message(TopUpStates.confirming_order, F.text == CANCEL_TEXT)
+@router.message(TopUpStates.choosing_game, F.text.in_(labels_for("btn.cancel")))
+@router.message(TopUpStates.choosing_product, F.text.in_(labels_for("btn.cancel")))
+@router.message(TopUpStates.waiting_uid, F.text.in_(labels_for("btn.cancel")))
+@router.message(TopUpStates.confirming_account, F.text.in_(labels_for("btn.cancel")))
+@router.message(TopUpStates.confirming_order, F.text.in_(labels_for("btn.cancel")))
 async def cancel_topup(
     message: Message,
     state: FSMContext,
@@ -172,7 +165,7 @@ async def cancel_topup(
             logger.exception("Cancel order failed order_id=%s", order_id)
 
     await message.answer(
-        "🚫 Амалиёт бекор карда шуд.",
+        t("top.cancelled"),
         reply_markup=get_main_menu_keyboard(),
     )
 
@@ -198,7 +191,7 @@ async def cancel_topup_callback(
 
     await safe_edit_text(
         call.message,
-        "🚫 Амалиёт бекор карда шуд.",
+        t("top.cancelled"),
         reply_markup=get_main_menu_keyboard(),
     )
     await safe_answer(call)
@@ -213,14 +206,14 @@ async def on_game_selected(
 ) -> None:
     game = (call.data or "").removeprefix("game:")
     if not is_known_game(game):
-        await safe_answer(call, "Нодуруст.", show_alert=True)
+        await safe_answer(call, t("bal.invalid"), show_alert=True)
         return
 
     await state.update_data(game=game, category=None)
     await state.set_state(TopUpStates.choosing_game)
 
     if session is None:
-        await safe_answer(call, "Хатогӣ. Дубора кӯшиш кунед.", show_alert=True)
+        await safe_answer(call, t("bal.error"), show_alert=True)
         return
 
     game_label = _catalog_game_label(game)
@@ -230,7 +223,7 @@ async def on_game_selected(
         await safe_edit_text(
             call.message,
             f"🔥 <b>{game_label}</b>\n\n"
-            "Гурӯҳро интихоб кунед:",
+            + t("top.choose_category"),
             reply_markup=get_ff_category_keyboard(),
         )
         await safe_answer(call)
@@ -240,15 +233,15 @@ async def on_game_selected(
         result = await _products_prompt(session, game, db_user)
     except Exception:
         logger.exception("Products load failed game=%s", game)
-        await safe_answer(call, "Хатогӣ. Дубора кӯшиш кунед.", show_alert=True)
+        await safe_answer(call, t("bal.error"), show_alert=True)
         return
 
     if result is None:
         await state.set_state(TopUpStates.choosing_product)
         await safe_edit_text(
             call.message,
-            f"😔 <b>{game_label}</b>\n\nҲоло маҳсулотҳо мавҷуд нест.\n"
-            "Бозии дигарро интихоб кунед:",
+            f"😔 <b>{game_label}</b>\n\n"
+            + t("top.no_products"),
             reply_markup=get_game_keyboard(),
         )
         await safe_answer(call)
@@ -289,17 +282,17 @@ async def on_category_selected(
 ) -> None:
     category = (call.data or "").removeprefix("cat:")
     if category not in FF_CATEGORIES:
-        await safe_answer(call, "Нодуруст.", show_alert=True)
+        await safe_answer(call, t("bal.invalid"), show_alert=True)
         return
 
     data = await state.get_data()
     game = data.get("game", "ff")
     if game != "ff":
-        await safe_answer(call, "Нодуруст.", show_alert=True)
+        await safe_answer(call, t("bal.invalid"), show_alert=True)
         return
 
     if session is None:
-        await safe_answer(call, "Хатогӣ. Дубора кӯшиш кунед.", show_alert=True)
+        await safe_answer(call, t("bal.error"), show_alert=True)
         return
 
     await state.update_data(category=category, product_id=None)
@@ -311,14 +304,13 @@ async def on_category_selected(
         logger.exception(
             "Products load failed game=%s category=%s", game, category
         )
-        await safe_answer(call, "Хатогӣ. Дубора кӯшиш кунед.", show_alert=True)
+        await safe_answer(call, t("bal.error"), show_alert=True)
         return
 
     if result is None:
         await safe_edit_text(
             call.message,
-            "😔 Дар ин гурӯҳ ҳанӯз маҳсулот нест.\n"
-            "Гурӯҳро дигар интихоб кунед:",
+            t("top.no_products_group"),
             reply_markup=get_ff_category_keyboard(),
         )
         await safe_answer(call)
@@ -348,7 +340,7 @@ async def on_back_categories(
     if game == "ff":
         await safe_edit_text(
             call.message,
-            "🔥 <b>Free Fire</b>\n\nГурӯҳро интихоб кунед:",
+            "🔥 <b>Free Fire</b>\n\n" + t("top.choose_category"),
             reply_markup=get_ff_category_keyboard(),
         )
     else:
@@ -374,14 +366,14 @@ async def on_back_products(
     if game == "ff" and not category:
         await safe_edit_text(
             call.message,
-            "🔥 <b>Free Fire</b>\n\nГурӯҳро интихоб кунед:",
+            "🔥 <b>Free Fire</b>\n\n" + t("top.choose_category"),
             reply_markup=get_ff_category_keyboard(),
         )
         await safe_answer(call)
         return
 
     if session is None:
-        await safe_answer(call, "Хатогӣ. Дубора кӯшиш кунед.", show_alert=True)
+        await safe_answer(call, t("bal.error"), show_alert=True)
         return
 
     result = await _products_prompt(session, game, db_user, category=category)
@@ -414,7 +406,7 @@ async def on_back_uid(call: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(TopUpStates.waiting_uid)
     await safe_edit_text(
         call.message,
-        UID_PROMPT.format(game_label=game_label),
+        t("top.uid_prompt", game_label=game_label),
         reply_markup=get_uid_request_keyboard(),
     )
     await safe_answer(call)
@@ -427,7 +419,7 @@ async def on_product_selected(
 ) -> None:
     product_id = _parse_callback_id(call.data or "", "product:")
     if product_id is None:
-        await safe_answer(call, "Нодуруст.", show_alert=True)
+        await safe_answer(call, t("bal.invalid"), show_alert=True)
         return
 
     data = await state.get_data()
@@ -438,7 +430,7 @@ async def on_product_selected(
     await state.set_state(TopUpStates.waiting_uid)
     await safe_edit_text(
         call.message,
-        UID_PROMPT.format(game_label=game_label),
+        t("top.uid_prompt", game_label=game_label),
         reply_markup=get_uid_request_keyboard(),
     )
     await safe_answer(call)
@@ -464,7 +456,7 @@ async def process_uid(
     if not product_id:
         await _clear_topup_state(state)
         await message.answer(
-            "❌ Маҳсулот ёфт нашуд. Дубора оғоз кунед.",
+            t("top.product_not_found"),
             reply_markup=get_main_menu_keyboard(),
         )
         return
@@ -474,8 +466,7 @@ async def process_uid(
         info = await provider.lookup_account(uid, game=game)
     except NotImplementedError:
         await message.answer(
-            "❌ Санҷидани ID ҳоло дастрас нест.\n"
-            "Лутфан ба дастгирӣ муроҷиат кунед.",
+            t("top.uid_lookup_unavailable"),
             reply_markup=get_main_menu_keyboard(),
         )
         await _clear_topup_state(state)
@@ -483,14 +474,14 @@ async def process_uid(
     except Exception:
         logger.exception("Account lookup failed uid=%s game=%s", uid, game)
         await message.answer(
-            "❌ Хатогӣ ҳангоми санҷидани ID. Дубора кӯшиш кунед.",
+            t("top.uid_lookup_error"),
             reply_markup=get_uid_request_keyboard(),
         )
         return
 
     if not info.found:
         await message.answer(
-            f"❌ ID ёфт нашуд. {info.message}",
+            f"{t('top.uid_not_found')} {info.message}".rstrip(),
             reply_markup=get_uid_request_keyboard(),
         )
         return
@@ -500,22 +491,15 @@ async def process_uid(
     await state.set_state(TopUpStates.confirming_account)
 
     if nickname:
-        name_line = f"👤 Ном: <b>{nickname}</b>\n\nОё ҳамин ҳисоби шумост?"
+        name_line = t("top.name_line", nickname=nickname)
     else:
-        short_note = "Ном санҷида нашуд. Бе санҷиш ID-ро идома диҳед."
+        short_note = t("top.name_not_checked")
         if info.message and ("API" in info.message or "http" in info.message.lower()):
             short_note = info.message
-        name_line = (
-            "👤 Ном: <i>аниқланмади</i>\n"
-            f"ℹ️ {short_note}\n\n"
-            "Оё ҳамин ID шумост?"
-        )
+        name_line = t("top.name_unknown", note=short_note)
 
     await message.answer(
-        "🔍 <b>Санҷидани ҳисоб</b>\n\n"
-        f"🎮 Бозӣ: {info.game}\n"
-        f"🆔 UID: <code>{uid}</code>\n"
-        f"{name_line}",
+        t("top.verify", game=info.game, uid=uid, name=name_line),
         reply_markup=get_account_confirm_keyboard(),
     )
 
@@ -528,10 +512,10 @@ async def on_account_no(call: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(TopUpStates.waiting_uid)
     await safe_edit_text(
         call.message,
-        UID_PROMPT.format(game_label=game_label),
+        t("top.uid_prompt", game_label=game_label),
         reply_markup=get_uid_request_keyboard(),
     )
-    await safe_answer(call, "ID-и дигар ворид кунед.")
+    await safe_answer(call, t("top.enter_other_id"))
 
 
 async def _show_order_confirm(
@@ -561,25 +545,25 @@ async def _show_order_confirm(
         await _clear_topup_state(state)
         await safe_edit_text(
             call.message,
-            "😔 Ин маҳсулот дастрас нест.",
+            t("top.product_unavailable"),
             reply_markup=get_main_menu_keyboard(),
         )
-        await safe_answer(call, "Маҳсулот дастрас нест.", show_alert=True)
+        await safe_answer(call, t("top.product_unavailable_alert"), show_alert=True)
         return
 
     balance = Decimal(db_user.balance)
     price = Decimal(product.price)
     after = balance - price
 
-    text = (
-        "🧾 <b>Тасдики фармоиш</b>\n\n"
-        f"📦 Маҳсулот: {format_product_button(product)}\n"
-        f"🎮 Бозӣ: {game_label}\n"
-        f"🆔 Гиранда: <code>{uid}</code>\n"
-        f"👤 Лақаб: <b>{nickname}</b>\n\n"
-        f"💳 Ҳисоби шумо: <b>{_fmt_money(balance)} {product.currency}</b>\n"
-        f"📉 Пас аз харид: <b>{_fmt_money(after)} {product.currency}</b>\n\n"
-        "Барои пардохт тугмаи поёнро пахш кунед."
+    text = t(
+        "top.order_confirm",
+        product=format_product_button(product),
+        game=game_label,
+        uid=uid,
+        nickname=nickname,
+        balance=_fmt_money(balance),
+        currency=product.currency,
+        after=_fmt_money(after),
     )
     await state.set_state(TopUpStates.confirming_order)
     await safe_edit_text(call.message, text, reply_markup=get_order_confirm_keyboard())
@@ -594,7 +578,7 @@ async def on_account_yes(
     db_user: User | None = None,
 ) -> None:
     if db_user is None:
-        await safe_answer(call, "Шумо ҳанӯз сабт наштаед.", show_alert=True)
+        await safe_answer(call, t("alert.not_registered"), show_alert=True)
         return
     await _show_order_confirm(call, state, session, db_user)
 
@@ -607,7 +591,7 @@ async def on_order_pay(
     db_user: User | None = None,
 ) -> None:
     if db_user is None or session is None:
-        await safe_answer(call, "Шумо ҳанӯз сабт наштаед.", show_alert=True)
+        await safe_answer(call, t("alert.not_registered"), show_alert=True)
         return
 
     data = await state.get_data()
@@ -618,19 +602,19 @@ async def on_order_pay(
         await safe_edit_text(
             call.message, _game_prompt(db_user), reply_markup=get_game_keyboard()
         )
-        await safe_answer(call, "Маълумот ёфт нашуд.", show_alert=True)
+        await safe_answer(call, t("top.data_not_found"), show_alert=True)
         return
 
     order_service = OrderService(session)
     product = await order_service.get_product(product_id)
     if product is None or not product.is_active:
-        await safe_answer(call, "Ин маҳсулот дастрас нест.", show_alert=True)
+        await safe_answer(call, t("top.product_unavailable_alert"), show_alert=True)
         return
 
     user_service = UserService(session)
     user = await user_service.get_profile(call.from_user.id)
     if user is None:
-        await safe_answer(call, "Шумо ҳанӯз сабт наштаед.", show_alert=True)
+        await safe_answer(call, t("alert.not_registered"), show_alert=True)
         return
 
     try:
@@ -659,19 +643,18 @@ async def on_order_pay(
 
     await _notify_admins_balance_order(session, order, product_name)
 
-    text = (
-        "✅ <b>Пардохт анjom ёфт!</b>\n\n"
-        f"📦 Фармоиш: №{order_id}\n"
-        f"🎮 {product_name}\n"
-        f"🆔 UID: <code>{uid}</code>\n"
-        f"💳 Ҳисоб: {new_balance} {currency}\n\n"
-        "⏳ Интизори қабули админ шавед.\n"
-        "Дар бораи қабул/рад ба шумо хабар дода мешавад."
+    text = t(
+        "top.paid",
+        id=order_id,
+        product=product_name,
+        uid=uid,
+        balance=new_balance,
+        currency=currency,
     )
     await safe_edit_text(
         call.message, text, reply_markup=get_payment_receipt_keyboard(order_id)
     )
-    await safe_answer(call, "Пардохт шуд!")
+    await safe_answer(call, t("top.paid_alert"))
 
 
 async def _notify_admins_balance_order(
@@ -686,14 +669,14 @@ async def _notify_admins_balance_order(
     if user is not None:
         user_label = f"@{user.username}" if user.username else str(user.telegram_id)
 
-    admin_text = (
-        "💰 <b>Пардохт аз баланс</b>\n\n"
-        f"📦 №{order.id}\n"
-        f"🎮 {product_name}\n"
-        f"🆔 UID: <code>{order.free_fire_uid}</code>\n"
-        f"💰 {order.amount} {order.currency}\n"
-        f"👤 Клиент: {user_label}\n\n"
-        "Тасдиқ ё рад кунед:"
+    admin_text = t(
+        "top.admin_order",
+        id=order.id,
+        product=product_name,
+        uid=order.free_fire_uid,
+        amount=order.amount,
+        currency=order.currency,
+        user=user_label,
     )
     try:
         await notification_service.notify_admins_new_order(
@@ -743,11 +726,11 @@ async def on_order_cancel(
 
     await safe_edit_text(
         call.message,
-        "🚫 Фармоиш бекор карда шуд.",
+        t("top.order_cancelled"),
         reply_markup=None,
     )
     await call.message.answer(
-        "🏠 <b>Менюи DANAT.TJ</b>",
+        t("menu.title"),
         reply_markup=get_main_menu_keyboard(),
     )
     await safe_answer(call)

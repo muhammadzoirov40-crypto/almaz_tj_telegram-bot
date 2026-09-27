@@ -207,9 +207,12 @@ async def on_forwarded_chat(message: Message) -> None:
         chat.username,
     )
     await message.answer(
-        f"🆔 Канал ID: <code>{chat.id}</code>\n"
-        f"📌 Ном: {chat.title or '—'}\n"
-        f"🔗 Юза: @{chat.username or 'йўқ (хусусий)'}"
+        t(
+            "chan.info",
+            id=chat.id,
+            title=chat.title or "—",
+            username=f"@{chat.username}" if chat.username else t("chan.none"),
+        )
     )
 
 
@@ -237,12 +240,14 @@ async def on_bot_chat_member(update: ChatMemberUpdated) -> None:
         try:
             await update.bot.send_message(
                 admin_id,
-                f"✅ Канал боғланди!\n\n"
-                f"🆔 ID: <code>{chat.id}</code>\n"
-                f"📌 Ном: {chat.title or '—'}\n"
-                f"🔗 Юза: @{chat.username or 'йўқ (хусусий)'}\n\n"
-                "Эндик «⭐ Баҳо гузоред» тугмаси шу каналга "
-                "переслёт қилади.",
+                t(
+                    "chan.linked",
+                    id=chat.id,
+                    title=chat.title or "—",
+                    username=(
+                        f"@{chat.username}" if chat.username else t("chan.none")
+                    ),
+                ),
             )
         except Exception:
             logger.exception(

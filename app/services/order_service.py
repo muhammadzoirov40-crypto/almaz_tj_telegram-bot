@@ -12,6 +12,7 @@ from app.database.repositories import (
     ProductRepository,
     TransactionRepository,
 )
+from app.i18n import t
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -42,9 +43,9 @@ class OrderService:
         deduct_balance: bool = True,
     ) -> Order:
         if not product.is_active:
-            raise OrderError("Ин маҳсулот ғайрифаъол аст.")
+            raise OrderError(t("svc.product_inactive"))
         if deduct_balance and user.balance < product.price:
-            raise OrderError("Баланс кофӣ нест. Лутфан аввал балансро пур кунед.")
+            raise OrderError(t("svc.insufficient"))
 
         if deduct_balance:
             # Deduct balance atomically within the same transaction
