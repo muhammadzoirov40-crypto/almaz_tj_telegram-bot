@@ -93,6 +93,7 @@ def test_ff_categories_have_own_colors():
     styles = _styles(get_ff_category_keyboard())
     assert styles["cat:diamonds"] == "success"
     assert styles["cat:vouchers"] == "primary"
+    assert styles["cat:levelpass"] is None  # dark / neutral
     assert styles["back:games"] == "danger"
 
 
@@ -127,3 +128,35 @@ def test_product_buttons_split_by_kind():
     assert styles["product:3"] == "success"  # diamonds — green
     assert styles["product:4"] == "success"  # PUBG — green
     assert styles["back:cat"] == "danger"
+
+
+def test_ff_level_pass_is_its_own_category():
+    from app.bot.handlers.topup import (
+        FF_CATEGORIES,
+        _ff_category,
+        _ff_category_label,
+    )
+    from app.i18n import set_lang
+
+    assert "levelpass" in FF_CATEGORIES
+    assert _ff_category("FF Level Up Pass 6") == "levelpass"
+    assert _ff_category("FF Weekly Voucher") == "vouchers"
+    assert _ff_category("FF 110 Diamonds") == "diamonds"
+    try:
+        set_lang("ru")
+        assert "Level Up Pass" in _ff_category_label("levelpass")
+        assert _ff_category_label("diamonds") != _ff_category_label("levelpass")
+    finally:
+        set_lang("ru")
+
+
+def test_i18n_has_levelpass_in_every_language():
+    from app.i18n import DEFAULT_LANG, LANGS, MESSAGES
+
+    for lang in LANGS:
+        assert "btn.levelpass" in MESSAGES[lang], lang
+        assert "btn.vouchers" in MESSAGES[lang], lang
+    # the three dictionaries must stay in sync
+    reference = set(MESSAGES[DEFAULT_LANG])
+    for lang in LANGS:
+        assert set(MESSAGES[lang]) == reference, lang

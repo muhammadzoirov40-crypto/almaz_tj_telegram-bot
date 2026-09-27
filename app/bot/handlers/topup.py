@@ -50,18 +50,26 @@ router = Router(name="topup")
 FF_CATEGORIES = {
     "diamonds": "diamonds",
     "vouchers": "vouchers",
+    "levelpass": "levelpass",
+}
+
+CATEGORY_LABEL_KEYS = {
+    "diamonds": "btn.diamonds",
+    "vouchers": "btn.vouchers",
+    "levelpass": "btn.levelpass",
 }
 
 
 def _ff_category_label(category: str) -> str:
-    key = "btn.diamonds" if category == "diamonds" else "btn.vouchers"
-    return t(key)
+    return t(CATEGORY_LABEL_KEYS.get(category, "btn.vouchers"))
 
 
 def _ff_category(name: str) -> str:
     lowered = name.lower()
     if "diamond" in lowered:
         return "diamonds"
+    if "level up pass" in lowered:
+        return "levelpass"
     return "vouchers"
 
 def _game_prompt(db_user: User | None) -> str:

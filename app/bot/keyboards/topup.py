@@ -134,7 +134,7 @@ def get_account_confirm_keyboard() -> InlineKeyboardMarkup:
 
 
 def get_ff_category_keyboard() -> InlineKeyboardMarkup:
-    return styled(InlineKeyboardMarkup(
+    markup = styled(InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -150,11 +150,21 @@ def get_ff_category_keyboard() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(
+                    text=t("btn.levelpass"),
+                    callback_data="cat:levelpass",
+                    style="primary",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
                     text=t("btn.back"), callback_data="back:games"
                 ),
             ],
         ]
     ))
+    # Level Up Pass keeps its own neutral (dark) colour.
+    markup.inline_keyboard[2][0].style = None
+    return markup
 
 
 def get_products_keyboard(
