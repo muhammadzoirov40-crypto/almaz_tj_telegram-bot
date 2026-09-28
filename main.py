@@ -333,10 +333,31 @@ async def _poll_fireloot_orders(bot: Bot) -> None:
             logger.exception("FireLoot order polling failed")
 
 
+async def _refresh_invite_link(bot: Bot) -> None:
+    """Keep the "join the channel" button working when Telegram rotates links."""
+    ref = settings.required_channel_id or None
+    if not ref:
+        return
+    try:
+        chat = await bot.get_chat(ref)
+    except Exception as exc:
+        logger.warning("Channel invite link refresh failed err=%s", exc)
+        return
+    link = getattr(chat, "invite_link", None)
+    if link and link != settings.required_channel_invite_url:
+        logger.warning(
+            "Channel invite link changed old=%s new=%s",
+            settings.required_channel_invite_url,
+            link,
+        )
+        settings.required_channel_invite_url = link
+
+
 async def on_startup(bot: Bot) -> None:
     await init_db_connection()
     await ensure_schema()
     notification_service.set_bot(bot)
+    await _refresh_invite_link(bot)
 
     commands = await get_bot_commands()
     await bot.set_my_commands(commands)

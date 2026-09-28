@@ -86,3 +86,56 @@ def test_subscribe_keyboard_has_two_buttons() -> None:
     assert join.url and join.url.startswith("https://t.me/")
     assert check.callback_data == "sub:check"
     assert join.text and check.text
+
+
+async def test_startup_refreshes_stale_invite_link(monkeypatch) -> None:
+    """The join button must follow the channel's current invite link."""
+    from types import SimpleNamespace
+
+    import main as main_module
+    from app.config import settings
+
+    monkeypatch.setattr(
+        settings, "required_channel_invite_url", "https://t.me/+OLD"
+    )
+
+    class _Bot:
+        async def get_chat(self, ref):
+            return SimpleNamespace(invite_link="https://t.me/+NEW")
+
+    await main_module._refresh_invite_link(_Bot())
+    assert settings.required_channel_invite_url == "https://t.me/+NEW"
+
+
+async def test_startup_keeps_matching_invite_link(monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    import main as main_module
+    from app.config import settings
+
+    monkeypatch.setattr(
+        settings, "required_channel_invite_url", "https://t.me/+SAME"
+    )
+
+    class _Bot:
+        async def get_chat(self, ref):
+            return SimpleNamespace(invite_link="https://t.me/+SAME")
+
+    await main_module._refresh_invite_link(_Bot())
+    assert settings.required_channel_invite_url == "https://t.me/+SAME"
+
+
+async def test_startup_survives_api_error(monkeypatch) -> None:
+    import main as main_module
+    from app.config import settings
+
+    monkeypatch.setattr(
+        settings, "required_channel_invite_url", "https://t.me/+KEEP"
+    )
+
+    class _Bot:
+        async def get_chat(self, ref):
+            raise RuntimeError("telegram down")
+
+    await main_module._refresh_invite_link(_Bot())
+    assert settings.required_channel_invite_url == "https://t.me/+KEEP"
